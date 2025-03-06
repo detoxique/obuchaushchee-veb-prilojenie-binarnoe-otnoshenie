@@ -81,7 +81,7 @@
 
 ## Используемые технологии
 
-* Frontend: HTML, CSS, JavaScript
-* Backend: Golang
-* БД: PostgreSQL
-* Аутентификация: JWT
+* _*Frontend:*_ HTML, CSS, JavaScript
+* _*Backend:*_ Golang
+* _*БД:*_ PostgreSQL
+* _*Аутентификация:*_ JWT
