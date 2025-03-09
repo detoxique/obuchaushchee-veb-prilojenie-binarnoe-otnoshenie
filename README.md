@@ -80,7 +80,8 @@
 * Установление соответствия
 
 Примеры интерфейсов:
-![Рис. 1](https://i.ibb.co/FkWg6GdR/2025-03-10-003821.png)
+1. Авторизация
+![Рис. 1](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/authrising.png)
 
 ## Используемые технологии
 
