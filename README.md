@@ -81,7 +81,24 @@
 
 Примеры интерфейсов:
 1. Авторизация
+
 ![Рис. 1](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/authrising.png)
+
+2. Профиль
+
+![Рис. 2](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/profile.png)
+
+3. Просмотр теории
+
+![Рис. 3](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/theory.png)
+
+4. Использование тренажера
+
+![](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/trainer.png)
+
+5. Начало тестирования
+
+![Рис. 4](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/test_start.png)
 
 ## Используемые технологии
 
