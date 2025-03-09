@@ -79,7 +79,7 @@
 * Вопрос с развернутым ответом
 * Установление соответствия
 
-Примеры интерфейсов:
+## Примеры интерфейсов:
 1. Авторизация
 
 ![Рис. 1](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/authrising.png)
