@@ -11,15 +11,12 @@
     
     <!-- Custom CSS-->
     <link rel="stylesheet" href="css/style.css">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,600;1,14..32,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz@0,14..32;1,14..32&display=swap" rel="stylesheet">
-
-    </head>
+  </head>
   <body>
     <!-- header -->
     <header class="container-fluid">
@@ -35,42 +32,19 @@
     </header>
     <!-- end header -->
     <!-- form -->
-    <div id="box">
-        <div class="container login_form">
-            <form class="row justify-content-center" method="post" action="index.html">
-                <div id="box3"></div>
-                <div id="box2"><h2>Авторизация</h2></div>
-                
-                <div class="w-100"></div>
-                <div class="mb-3 col-12">
-                    <label for="exampleInputLogin1" class="form-label">Логин</label>
-                    <input type="login" class="form-control" id="exampleInputLogin1">
-                </div>
-                
-                <div class="w-100"></div>
-                <div class="mb-3 col-12">
-                    <label for="exampleInputPassword1" class="form-label">Пароль</label>
-                    <input type="password" class="form-control" id="exampleInputPassword1">
-                  </div>
-                
-                <div class="w-100"></div>
-                <div class="mb-3 col-12 form-check">
-                    <div class="cb">
-                        <input type="checkbox" class="form-check-input" id="exampleCheck1">
-                        <label class="form-check-label" for="exampleCheck1">Оставаться в системе</label>
-                </div>
-                </div>
-                
-                <div class="w-100"></div>
-                <div class="mb-3 col-12">
-                    <div class="btn">
-                        <button type="submit" class="btn btn-light">Войти</button>
-                    </div>
-                </div>
-              </form>
-        </div>
-    </div>
     
+    <div class="form">
+        <div class="title">Авторизация</div>
+        <label id="login">
+            <input type="text" />
+            <span>Логин</span>
+        </label>
+        <label id="password">
+            <input type="password" />
+            <span>Пароль</span>
+        </label>
+        <div class="Button">Войти</div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   </body>
