@@ -88,17 +88,21 @@
 
 ![Рис. 2](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/profile.png)
 
-3. Просмотр теории
+3. Обзор курса
 
-![Рис. 3](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/theory.png)
+![Рис. 3](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/kurs.png)
 
-4. Использование тренажера
+4. Просмотр теории
 
-![](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/trainer.png)
+![Рис. 4](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/theory.png)
 
-5. Начало тестирования
+5. Использование тренажера
 
-![Рис. 4](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/test_start.png)
+![Рис. 5](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/trainer.png)
+
+6. Начало тестирования
+
+![Рис. 6](https://github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/blob/main/images/test_start.png)
 
 ## Используемые технологии
 
