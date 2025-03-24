@@ -52,8 +52,8 @@ body {
 }
 
 .form {
-    margin-top: 128px;
-    width: 400px;
+    margin-top: 188px;
+    width: 360px;
     display: grid;
     padding: 32px;
     background-color: #ffffff;
@@ -88,4 +88,9 @@ span{
     position: absolute;
     left: 12px;
     color:#666666;
+}
+Button{
+    text-align: center;
+    border: 1px solid #CECECE;
+    border-radius: 4px;
 }
