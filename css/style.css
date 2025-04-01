@@ -1,3 +1,6 @@
+:root {
+    --focus_color: #6D9B50
+}
 
 html,
 h1,
@@ -56,6 +59,7 @@ body {
     width: 360px;
     display: grid;
     padding: 32px;
+    padding-bottom: 16px;
     background-color: #ffffff;
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -70,9 +74,10 @@ body {
 label{
     position: relative;
 }
+
 input{
     height: 24px;
-    width: 256px;
+    width: 286px;
     border-radius: 10px;
     background-color: #F1F1F1;
     outline: none;
@@ -81,16 +86,27 @@ input{
     margin-bottom: 12px;
     box-sizing: border-box;
 }
-input:focus{
-    border-color: #6D9B50;
+input:focus, 
+label.filled input{
+    border-color: var(--focus_color);
+}
+input:focus + span, 
+label.filled span {
+    
+    font-size: 6px;
+    color: #00000000;
 }
 span{
     position: absolute;
     left: 12px;
     color:#666666;
+    transition: all 0.1s ease-in-out;
 }
-Button{
-    text-align: center;
-    border: 1px solid #CECECE;
-    border-radius: 4px;
+.Button{
+    justify-self: center;
+    background-color: var(--focus_color);
+    color:#ffffff;
+    padding: 4px 10px;
+    border-radius: 7px;
+    margin-top: 12px;
 }
