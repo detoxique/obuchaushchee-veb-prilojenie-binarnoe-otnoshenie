@@ -35,9 +35,9 @@ func (sf *ServeFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func Run(ctx context.Context) error {
 	slog.Info("starting server")
 
-	indexHtml := NewServeFile("text/html", "C:/Users/detox/Documents/kurs2/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/index.html")
-	stylesCss := NewServeFile("text/css", "C:/Users/detox/Documents/kurs2/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/css/style.css")
-	scriptJs := NewServeFile("text/js", "C:/Users/detox/Documents/kurs2/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/js/script.js")
+	indexHtml := NewServeFile("text/html", "/index.html")
+	stylesCss := NewServeFile("text/css", "/css/style.css")
+	scriptJs := NewServeFile("text/js", "/js/script.js")
 
 	mux := http.NewServeMux()
 
