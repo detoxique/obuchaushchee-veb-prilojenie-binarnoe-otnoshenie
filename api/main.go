@@ -1,12 +1,28 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
+var db *sql.DB
+
 func main() {
+	// Подключение к PostgreSQL
+	connStr := "postgres://postgres:123@localhost/portaldb?sslmode=disable"
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		fmt.Println("Database connection error:", err)
+		return
+	}
+	defer db.Close()
+
 	run()
 }
 
@@ -33,12 +49,25 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if loginData.Username == "admin" && loginData.Password == "12345" {
-		sendResponse(w, Response{Message: "Success"}, http.StatusOK)
-		fmt.Println("ADMIN SIGNED IN")
-	} else {
+	// Проверка пользователя в БД
+	var storedHash string
+	err = db.QueryRow("SELECT password FROM users WHERE username = $1", loginData.Username).Scan(&storedHash)
+	if err == sql.ErrNoRows {
 		sendError(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		sendError(w, "Database error", http.StatusInternalServerError)
+		return
 	}
+
+	// Проверка пароля
+	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(loginData.Password))
+	if err != nil {
+		sendError(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	sendResponse(w, Response{Message: "Success"}, http.StatusOK)
 }
 
 func sendResponse(w http.ResponseWriter, resp Response, status int) {
