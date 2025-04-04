@@ -92,17 +92,19 @@ label.filled input{
 }
 input:focus + span, 
 label.filled span {
-    
+    cursor:default;
     font-size: 6px;
     color: #00000000;
 }
 span{
+    cursor: text;
     position: absolute;
     left: 12px;
     color:#666666;
     transition: all 0.1s ease-in-out;
 }
 .Button{
+    cursor: pointer;
     justify-self: center;
     background-color: var(--focus_color);
     color:#ffffff;

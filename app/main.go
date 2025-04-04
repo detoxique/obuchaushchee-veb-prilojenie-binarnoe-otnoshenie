@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/internal/app"
+	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/app"
 )
 
 func main() {

@@ -1,0 +1,43 @@
+:root {
+    --focus_color: #6D9B50
+}
+
+html,
+h1,
+h2,
+h3,
+h4,
+h5 {
+    color: #ffffff;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+
+}
+body{
+    background: #CECECE;
+}
+a{
+    text-decoration: none;
+    color: inherit;
+}
+
+/*
+    HEADER
+*/
+
+header{
+    background: #6D9B50;
+    height: 64px;
+}
+header h1{
+    margin-top: 12px;
+    font-size: 32px;
+}
+header h1 a{
+    color: #ffffff;
+    margin-top: 6px;
+}
+header h1 a:hover{
+    color: #ffffff;
+    margin-top: 6px;
+}
