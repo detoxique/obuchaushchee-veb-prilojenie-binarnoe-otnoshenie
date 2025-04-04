@@ -72,6 +72,49 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var token string
+
+	err := json.NewDecoder(r.Body).Decode(&token)
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(token)
+	if err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Sent verify request")
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Auth server error", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+	w.WriteHeader(resp.StatusCode)
+	w.Write(body)
+}
+
 func Run(ctx context.Context) error {
 	slog.Info("starting server")
 
@@ -81,6 +124,7 @@ func Run(ctx context.Context) error {
 
 	http.HandleFunc("/", serveLoginPage)
 	http.HandleFunc("/api/login", handleLogin)
+	http.HandleFunc("/api/verify", handleVerifyToken)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	go func() {

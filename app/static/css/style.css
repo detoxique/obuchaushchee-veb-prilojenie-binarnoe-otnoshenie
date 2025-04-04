@@ -4,7 +4,6 @@
 
 html,
 h1,
-h2,
 h3,
 h4,
 h5 {
@@ -19,6 +18,12 @@ body{
 a{
     text-decoration: none;
     color: inherit;
+}
+
+h2 {
+    color: #000000;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
 }
 
 /*

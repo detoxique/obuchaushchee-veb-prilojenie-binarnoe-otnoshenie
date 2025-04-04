@@ -5,12 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var db *sql.DB
+
+const (
+	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK" // Замените на свой секретный ключ
+)
 
 func main() {
 	// Подключение к PostgreSQL
@@ -33,9 +39,15 @@ type LoginData struct {
 
 type Response struct {
 	Message string `json:"message"`
+	Token   string `json:"token,omitempty"`
 }
 
-// Обработчик для api/login
+type Claims struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
+
+// Обработчик для api/auth
 func handleAuth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -67,7 +79,23 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendResponse(w, Response{Message: "Success"}, http.StatusOK)
+	// Создание JWT
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		Username: loginData.Username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		sendError(w, "Could not generate token", http.StatusInternalServerError)
+		return
+	}
+
+	sendResponse(w, Response{Message: "Success", Token: tokenString}, http.StatusOK)
 }
 
 func sendResponse(w http.ResponseWriter, resp Response, status int) {
@@ -82,8 +110,33 @@ func sendError(w http.ResponseWriter, message string, status int) {
 	json.NewEncoder(w).Encode(Response{Message: message})
 }
 
+func verifyToken(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Got verify request")
+	tokenStr := r.Header.Get("Authorization")
+	if tokenStr == "" {
+		fmt.Println("No token provided")
+		sendError(w, "No token provided", http.StatusUnauthorized)
+		return
+	}
+	fmt.Println(tokenStr)
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		sendError(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	sendResponse(w, Response{Message: "Token valid"}, http.StatusOK)
+}
+
 func run() {
 	http.HandleFunc("/api/auth", handleAuth)
+	http.HandleFunc("/api/verify", verifyToken)
+
 	fmt.Println("Auth server started at :1337")
 	http.ListenAndServe(":1337", nil)
 }
