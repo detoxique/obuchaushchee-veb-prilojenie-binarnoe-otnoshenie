@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -33,8 +32,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	//fmt.Printf("login: " + loginData.Username + " password: " + loginData.Password)
-	// Простая логика проверки (в реальности используйте БД и хеширование)
+
 	if loginData.Username == "admin" && loginData.Password == "12345" {
 		sendResponse(w, Response{Message: "Success"}, http.StatusOK)
 		fmt.Println("ADMIN SIGNED IN")
@@ -56,19 +54,7 @@ func sendError(w http.ResponseWriter, message string, status int) {
 }
 
 func run() {
-	// Регистрируем обработчики для маршрутов
 	http.HandleFunc("/api/auth", handleAuth)
-	//http.HandleFunc("/about", aboutHandler)
-
-	// Указываем адрес и порт для прослушивания
-	addr := ":1337" // Можно изменить порт на другой свободный
-
-	// Выводим сообщение в консоль
-	fmt.Printf("Сервер запущен и слушает на %s\n", addr)
-
-	// Запускаем сервер
-	err := http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Fatal("Ошибка запуска сервера: ", err)
-	}
+	fmt.Println("Auth server started at :1337")
+	http.ListenAndServe(":1337", nil)
 }
