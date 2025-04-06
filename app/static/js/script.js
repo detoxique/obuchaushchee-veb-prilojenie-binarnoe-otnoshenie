@@ -16,10 +16,10 @@ function handleinput(e, name) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('jwtToken'); // Получаем токен из localStorage
-
+    
     if (!token) {
         // Токена нет
-
+        console.log("No token")
         return;
     }
 

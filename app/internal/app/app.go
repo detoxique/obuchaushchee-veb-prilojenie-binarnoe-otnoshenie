@@ -73,7 +73,9 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	slog.Info("Got verify request")
+	if r.Method != "GET" {
+
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -82,6 +84,7 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&token)
 	if err != nil {
+		slog.Info("Invalid request" + w.Header().Get("Authorization"))
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
@@ -89,12 +92,16 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(token)
 	if err != nil {
+		slog.Info("Internal error")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	slog.Info("Sent verify request")
 	// Отправка запроса на другой сервер
+
+	//url := "http://localhost:1337/api/verify"
+
 	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Auth server error", http.StatusInternalServerError)
@@ -106,6 +113,7 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
+		slog.Info("Server Error " + (string)(resp.StatusCode))
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)

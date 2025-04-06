@@ -99,12 +99,14 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendResponse(w http.ResponseWriter, resp Response, status int) {
+	fmt.Println("Response: " + resp.Message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func sendError(w http.ResponseWriter, message string, status int) {
+	fmt.Println("Error: " + message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Response{Message: message})
@@ -114,7 +116,6 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Got verify request")
 	tokenStr := r.Header.Get("Authorization")
 	if tokenStr == "" {
-		fmt.Println("No token provided")
 		sendError(w, "No token provided", http.StatusUnauthorized)
 		return
 	}
