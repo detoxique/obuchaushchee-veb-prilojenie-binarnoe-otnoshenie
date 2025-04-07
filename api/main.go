@@ -15,7 +15,7 @@ import (
 var db *sql.DB
 
 const (
-	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK" // Замените на свой секретный ключ
+	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK"
 )
 
 func main() {
