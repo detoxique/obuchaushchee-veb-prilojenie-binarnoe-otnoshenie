@@ -24,4 +24,4 @@ go.work.sum
 # env file
 .env
 mainapp/application
-desktop/build
+build
