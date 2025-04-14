@@ -15,7 +15,7 @@ import (
 var db *sql.DB
 
 const (
-	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK" // Замените на свой секретный ключ
+	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK"
 )
 
 func main() {
@@ -85,6 +85,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		Username: loginData.Username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
+			IssuedAt:  time.Now().Unix(),
 		},
 	}
 
