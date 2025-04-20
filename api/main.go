@@ -3,61 +3,50 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
-	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Порт
+const port string = ":1337"
+
+// БД
 var db *sql.DB
 
-const (
-	secretKey = "XEf65D.dyLUkbWF0aDysauVm55n5fdADFpi/CuYNnOIOMSB8uQLZK"
-)
-
-func main() {
-	// Подключение к PostgreSQL
-	connStr := "postgres://postgres:123@localhost/portaldb?sslmode=disable"
-	var err error
-	db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		fmt.Println("Database connection error:", err)
-		return
-	}
-	defer db.Close()
-
-	run()
-}
-
+// Данные для входа
 type LoginData struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// Ответ сервера
 type Response struct {
-	Message string `json:"message"`
-	Token   string `json:"token,omitempty"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-type Claims struct {
-	Username string `json:"username"`
-	jwt.StandardClaims
+// Токен
+type TokenResponse struct {
+	AccessToken string `json:"Authorization"`
 }
 
-// Обработчик для api/auth
+// Авторизация
 func handleAuth(w http.ResponseWriter, r *http.Request) {
+	// Обрабатывать только POST запросы
 	if r.Method != "POST" {
-		sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var loginData LoginData
+
+	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
-		sendError(w, "Invalid request", http.StatusBadRequest)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
@@ -68,7 +57,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	} else if err != nil {
-		sendError(w, "Database error", http.StatusInternalServerError)
+		sendError(w, "Database error "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -79,66 +68,81 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создание JWT
-	expirationTime := time.Now().Add(24 * time.Hour)
-	claims := &Claims{
-		Username: loginData.Username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-			IssuedAt:  time.Now().Unix(),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(secretKey))
+	// Генерация токенов
+	accessToken, err := GenerateAccessToken(loginData.Username)
 	if err != nil {
-		sendError(w, "Could not generate token", http.StatusInternalServerError)
+		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
 		return
 	}
 
-	sendResponse(w, Response{Message: "Success", Token: tokenString}, http.StatusOK)
+	refreshToken, err := GenerateRefreshToken(loginData.Username)
+	if err != nil {
+		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+		return
+	}
+
+	// Формируем ответ
+	response := Response{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func sendResponse(w http.ResponseWriter, resp Response, status int) {
-	fmt.Println("Response: " + resp.Message)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(resp)
+// Подтверждение токена
+func verifyToken(w http.ResponseWriter, r *http.Request) {
+	// Обрабатывать только POST запросы
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var token TokenResponse
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&token)
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("access_token: " + token.AccessToken)
 }
 
 func sendError(w http.ResponseWriter, message string, status int) {
-	fmt.Println("Error: " + message)
+	log.Println("Error: " + message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(Response{Message: message})
+	//json.NewEncoder(w).Encode(Response{Message: message})
 }
 
-func verifyToken(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Got verify request")
-	tokenStr := r.Header.Get("Authorization")
-	if tokenStr == "" {
-		sendError(w, "No token provided", http.StatusUnauthorized)
+func connectDB() {
+	// Подключение к PostgreSQL
+	connStr := "postgres://postgres:123@localhost/portaldb?sslmode=disable"
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		log.Println("Database connection error:", err)
 		return
 	}
-	fmt.Println(tokenStr)
-
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(secretKey), nil
-	})
-
-	if err != nil || !token.Valid {
-		sendError(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
-
-	sendResponse(w, Response{Message: "Token valid"}, http.StatusOK)
+	//defer db.Close()
 }
 
-func run() {
+func main() {
+	connectDB()
+
+	log.Println("Сервер API запущен на " + port)
+
 	http.HandleFunc("/api/auth", handleAuth)
 	http.HandleFunc("/api/verify", verifyToken)
 
-	fmt.Println("Auth server started at :1337")
-	http.ListenAndServe(":1337", nil)
+	// Запуск сервера (Ctrl + C, чтобы выключить)
+	err := http.ListenAndServe(port, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

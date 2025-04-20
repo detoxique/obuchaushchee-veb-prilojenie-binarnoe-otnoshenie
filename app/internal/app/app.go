@@ -10,11 +10,13 @@ import (
 	"net/http"
 )
 
+// Данные для входа
 type LoginData struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// Страница авторизации
 func serveLoginPage(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("templates/index.html")
 	if err != nil {
@@ -24,6 +26,17 @@ func serveLoginPage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// Страница Профиля
+func serveProfilePage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/profile.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
+// Авторизация
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -98,10 +111,8 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("Sent verify request")
+
 	// Отправка запроса на другой сервер
-
-	//url := "http://localhost:1337/api/verify"
-
 	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Auth server error", http.StatusInternalServerError)
@@ -130,10 +141,14 @@ func Run(ctx context.Context) error {
 		Addr: ":8080",
 	}
 
+	// HTML
 	http.HandleFunc("/", serveLoginPage)
+	http.HandleFunc("/profile", serveProfilePage)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// API
 	http.HandleFunc("/api/login", handleLogin)
 	http.HandleFunc("/api/verify", handleVerifyToken)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	go func() {
 		<-ctx.Done()
