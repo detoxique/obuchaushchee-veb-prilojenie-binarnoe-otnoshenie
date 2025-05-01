@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -32,4 +33,26 @@ func GenerateRefreshToken(username string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(refreshTokenSecret))
+}
+
+func CheckToken(tokenString string) bool {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Проверяем метод подписи
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(accessTokenSecret), nil
+	})
+	if err != nil {
+		fmt.Println("JWT check error " + err.Error())
+		return false
+	}
+
+	// Проверяем валидность токена
+	if !token.Valid {
+		return false
+	}
+
+	return true
 }

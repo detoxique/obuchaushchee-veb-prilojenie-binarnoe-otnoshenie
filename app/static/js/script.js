@@ -15,7 +15,10 @@ function handleinput(e, name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const token = localStorage.getItem('jwtToken'); // Получаем токен из localStorage
+    if (window.location.href == '/profile.html')
+        return;
+
+    const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
     
     if (!token) {
         // Токена нет
@@ -25,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Отправляем токен на сервер для проверки
     fetch('http://localhost:8080/api/verify', {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
             'Content-Type': 'application/json'
@@ -40,14 +43,16 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
         // Успешная проверка токена
         console.log(data.message); // Например: "Token valid for user: admin"
-        document.body.innerHTML = `<h2>${data.message}</h2>`;
+        document.body.innerHTML = `<h2>Logged in</h2>`;
+        window.location.href = '/profile.html'
     })
     .catch(error => {
         // Ошибка проверки токена
         console.error('Error:', error);
         document.body.innerHTML = '<h2>Ошибка авторизации. Токен недействителен.</h2>';
-        localStorage.removeItem('jwtToken'); // Удаляем недействительный токен
-        setTimeout(() => window.location.href = '/index.html', 2000);
+        localStorage.removeItem('access_token'); // Удаляем недействительный токен
+        localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
+        setTimeout(() => window.location.href = '/', 2000);
     });
 });
 
@@ -68,7 +73,8 @@ async function handlelogin() {
         if (!res.ok) throw new Error(data.message);
 
         // Сохраняем токен в localStorage
-        localStorage.setItem('jwtToken', data.token);
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('access_token', data.refresh_token);
         alert('Login successful!');
     } catch (err) {
         alert('Error: ' + err.message);

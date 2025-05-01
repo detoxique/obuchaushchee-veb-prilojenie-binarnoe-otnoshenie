@@ -3,8 +3,12 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"unicode/utf8"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -95,22 +99,48 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 // Подтверждение токена
 func verifyToken(w http.ResponseWriter, r *http.Request) {
+	log.Println("Got verify request")
 	// Обрабатывать только POST запросы
 	if r.Method != "POST" {
+		log.Println("Method not allowed")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var token TokenResponse
-
-	// Чтение JSON
-	err := json.NewDecoder(r.Body).Decode(&token)
+	dump, err := httputil.DumpRequest(r, true)
 	if err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+	fmt.Printf("Request Dump:\n%s\n", string(dump))
+
+	token, err := ExtractBodyFromRequest(r)
+	if err != nil {
+		log.Println("Extract failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("access_token: " + token.AccessToken)
+	token = removeCharAtIndex(token, 0)
+	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
+
+	// Чтение JSON
+	/*er := json.NewDecoder(r.Body).Decode(&token)
+	if er != nil {
+		log.Println("Unable to decode")
+		http.Error(w, "Invalid request. Unable to decode", http.StatusBadRequest)
+		return
+	}*/
+
+	log.Println("access_token: " + token)
+
+	if CheckToken(token) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
 }
 
 func sendError(w http.ResponseWriter, message string, status int) {
@@ -118,6 +148,28 @@ func sendError(w http.ResponseWriter, message string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	//json.NewEncoder(w).Encode(Response{Message: message})
+}
+
+// ExtractBodyFromRequest извлекает тело HTTP-запроса как строку
+func ExtractBodyFromRequest(r *http.Request) (string, error) {
+	// Читаем тело запроса
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return "", err
+	}
+	// Закрываем тело запроса
+	defer r.Body.Close()
+
+	// Преобразуем байты в строку
+	bodyString := string(bodyBytes)
+	return bodyString, nil
+}
+
+func removeCharAtIndex(s string, index int) string {
+	if index < 0 || index >= len(s) {
+		return ""
+	}
+	return s[:index] + s[index+1:]
 }
 
 func connectDB() {

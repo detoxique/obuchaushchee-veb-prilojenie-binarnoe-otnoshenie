@@ -4,16 +4,23 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httputil"
+	"strings"
 )
 
 // Данные для входа
 type LoginData struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type TokenResponse struct {
+	AccessToken string `json:"Authorization"`
 }
 
 // Страница авторизации
@@ -87,23 +94,28 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Got verify request")
-	if r.Method != "GET" {
-
+	if r.Method != "POST" {
+		slog.Info("Method not allowed")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var token string
-
-	err := json.NewDecoder(r.Body).Decode(&token)
+	dump, err := httputil.DumpRequest(r, true)
 	if err != nil {
-		slog.Info("Invalid request" + w.Header().Get("Authorization"))
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+	//fmt.Printf("Request Dump:\n%s\n", string(dump))
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Extract failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(token)
+	body, err := json.Marshal(&token)
 	if err != nil {
 		slog.Info("Internal error")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -130,8 +142,23 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 		w.Write(body)
 		return
 	}
-	w.WriteHeader(resp.StatusCode)
-	w.Write(body)
+}
+
+// ExtractJWT извлекает JWT-токен из строки HTTP-запроса
+func ExtractJWT(request string) string {
+	// Разбиваем запрос на строки
+	lines := strings.Split(request, "\n")
+
+	// Ищем заголовок Authorization
+	for _, line := range lines {
+		if strings.HasPrefix(strings.ToLower(line), "authorization:") {
+			// Удаляем префикс "Authorization:" и пробелы
+			auth := strings.TrimSpace(strings.TrimPrefix(line, "Authorization:"))
+			return auth
+		}
+	}
+
+	return ""
 }
 
 func Run(ctx context.Context) error {
