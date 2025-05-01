@@ -108,5 +108,6 @@
 
 * _*Frontend:*_ HTML, CSS, JavaScript
 * _*Backend:*_ Golang
-* _*БД:*_ PostgreSQL
+* _*БД:*_ PostgreSQL, MongoDB
 * _*Аутентификация:*_ JWT
+* _*Desktop:*_ C++, QT
