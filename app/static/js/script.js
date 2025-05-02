@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.innerHTML = '<h2>Ошибка авторизации. Токен недействителен.</h2>';
         localStorage.removeItem('access_token'); // Удаляем недействительный токен
         localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
-        setTimeout(() => window.location.href = '/', 2000);
+        setTimeout(() => window.location.href = '/', 15000);
     });
 });
 
@@ -74,7 +74,7 @@ async function handlelogin() {
 
         // Сохраняем токен в localStorage
         localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('access_token', data.refresh_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         alert('Login successful!');
     } catch (err) {
         alert('Error: ' + err.message);

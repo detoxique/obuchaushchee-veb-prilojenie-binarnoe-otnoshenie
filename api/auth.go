@@ -4,55 +4,75 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Секреты для токенов
-const (
-	accessTokenSecret  = "jkl89Grh8G"
-	refreshTokenSecret = "nlgRGeirg7"
+var (
+	accessTokenSecret  = []byte("jlesrvosreg")
+	refreshTokenSecret = []byte("eriluvsekrg")
 )
+
+// CustomClaims структура с стандартными claims и пользовательскими данными
+type CustomClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
 
 // Генерация access-токена (действует 15 минут)
 func GenerateAccessToken(username string) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": username,
-		"exp": time.Now().Add(15 * time.Minute).Unix(),
-		"iat": time.Now().Unix(),
+	claims := CustomClaims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			Issuer:    "auth-service",
+		},
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(accessTokenSecret))
+
+	return token.SignedString(accessTokenSecret)
 }
 
 // Генерация refresh-токена (действует 7 дней)
 func GenerateRefreshToken(username string) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": username,
-		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(),
-		"iat": time.Now().Unix(),
+	claims := CustomClaims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			Issuer:    "auth-service",
+		},
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(refreshTokenSecret))
+	return token.SignedString(refreshTokenSecret)
 }
 
-func CheckToken(tokenString string) bool {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Проверяем метод подписи
+func debugToken(tokenString string) {
+	// Парсинг без проверки подписи
+	token, _, _ := jwt.NewParser().ParseUnverified(tokenString, &CustomClaims{})
+	if claims, ok := token.Claims.(*CustomClaims); ok {
+		fmt.Printf("Token claims: %+v\n", claims)
+		fmt.Printf("Signing alg: %v\n", token.Header["alg"])
+		fmt.Printf("Time now: %v\n", time.Now())
+	}
+}
+
+func CheckToken(tokenString string) (bool, error) {
+	debugToken(tokenString)
+
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Проверяем, что алгоритм подписи тот же, что использовался при генерации
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
-		return []byte(accessTokenSecret), nil
+		return accessTokenSecret, nil
 	})
-	if err != nil {
-		fmt.Println("JWT check error " + err.Error())
-		return false
+
+	if err != nil || !token.Valid {
+		return false, fmt.Errorf("invalid token: %v", err)
 	}
 
-	// Проверяем валидность токена
-	if !token.Valid {
-		return false
-	}
-
-	return true
+	fmt.Println("Token validated correctly!")
+	return true, nil
 }

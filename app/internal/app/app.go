@@ -43,6 +43,16 @@ func serveProfilePage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// Страница админ панели
+func serveAdminPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/admin.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
 // Авторизация
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -54,6 +64,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
+		slog.Info("Failed to read auth data")
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
@@ -61,6 +72,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(loginData)
 	if err != nil {
+		slog.Info("Failed to create json")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -68,6 +80,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/auth", "application/json", bytes.NewBuffer(body))
 	if err != nil {
+		slog.Info("Failed to send. Auth server error")
 		http.Error(w, "Auth server error", http.StatusInternalServerError)
 		return
 	}
@@ -77,6 +90,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
+		slog.Info("Auth server error")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -144,7 +158,7 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ExtractJWT извлекает JWT-токен из строки HTTP-запроса
+// Извлекает JWT-токен из строки HTTP-запроса
 func ExtractJWT(request string) string {
 	// Разбиваем запрос на строки
 	lines := strings.Split(request, "\n")
@@ -171,6 +185,7 @@ func Run(ctx context.Context) error {
 	// HTML
 	http.HandleFunc("/", serveLoginPage)
 	http.HandleFunc("/profile", serveProfilePage)
+	http.HandleFunc("/admin", serveAdminPage)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// API

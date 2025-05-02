@@ -50,6 +50,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
+		log.Println("Invalid request")
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
@@ -58,9 +59,11 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	var storedHash string
 	err = db.QueryRow("SELECT password FROM users WHERE username = $1", loginData.Username).Scan(&storedHash)
 	if err == sql.ErrNoRows {
+		log.Println("Invalid credentials")
 		sendError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	} else if err != nil {
+		log.Println("Database error")
 		sendError(w, "Database error "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -68,6 +71,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Проверка пароля
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(loginData.Password))
 	if err != nil {
+		log.Println("Invalid credentials")
 		sendError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -75,12 +79,14 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Генерация токенов
 	accessToken, err := GenerateAccessToken(loginData.Username)
 	if err != nil {
+		log.Println("Failed to generate access token" + err.Error())
 		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
 		return
 	}
 
 	refreshToken, err := GenerateRefreshToken(loginData.Username)
 	if err != nil {
+		log.Println("Failed to generate refresh token")
 		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
 	}
@@ -132,15 +138,20 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}*/
 
-	log.Println("access_token: " + token)
+	tokenCheck, err := CheckToken(token)
+	if err != nil {
+		log.Println("Token validate failed. " + err.Error())
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
 
-	if CheckToken(token) {
+	if !tokenCheck {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(http.StatusOK)
 }
 
 func sendError(w http.ResponseWriter, message string, status int) {
