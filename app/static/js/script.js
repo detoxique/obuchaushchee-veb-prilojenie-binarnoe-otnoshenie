@@ -15,9 +15,6 @@ function handleinput(e, name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.href == '/profile.html')
-        return;
-
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
     
     if (!token) {

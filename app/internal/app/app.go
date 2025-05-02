@@ -156,6 +156,7 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 		w.Write(body)
 		return
 	}
+	w.Write(body)
 }
 
 // Извлекает JWT-токен из строки HTTP-запроса
