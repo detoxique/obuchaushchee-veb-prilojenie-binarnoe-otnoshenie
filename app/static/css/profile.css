@@ -4,8 +4,6 @@
 
 html,
 h1,
-h3,
-h4,
 h5 {
     color: #ffffff;
     font-family: "Inter", sans-serif;
@@ -105,11 +103,15 @@ header h1 a:hover{
 
 .profile-info h2 {
     margin: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
     font-size: 1.2em;
 }
 
 .profile-info p {
     margin: 5px 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
     font-size: 0.9em;
     color: #555;
 }
@@ -126,12 +128,20 @@ header h1 a:hover{
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.grades-header h3 {
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
 }
 
 .grades-list {
     list-style: none;
     padding: 0;
     margin: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
 }
 
 .grades-list li {
@@ -165,6 +175,8 @@ header h1 a:hover{
     border: 1px solid #ccc;
     border-radius: 4px;
     margin-right: 5px;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
 }
 
 .course-search button {
@@ -180,6 +192,8 @@ header h1 a:hover{
     list-style: none;
     padding: 0;
     margin: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
 }
 
 .course-list li {
@@ -194,21 +208,31 @@ header h1 a:hover{
 /* Performance Styling */
 .performance {
     text-align: center;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
 }
 
 .percentage {
     font-size: 3em; /* Increase the size */
-    font-weight: bold;
-    color: #2e7d32; /* Or any other suitable color */
+    color: #6D9B50; /* Or any other suitable color */
 }
 
 .more-grades{
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
     text-align: right;
     margin-top: 10px;
 }
 
 .more-grades a{
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
     text-decoration: none;
-    color: #7cb342;
+    color: #6D9B50;
 
+}
+
+.courses-section h3{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
 }
