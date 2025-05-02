@@ -40,16 +40,41 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
         // Успешная проверка токена
         console.log(data.message); // Например: "Token valid for user: admin"
-        document.body.innerHTML = `<h2>Logged in</h2>`;
-        window.location.href = '/profile.html'
+        //document.body.innerHTML = `<h2>Logged in</h2>`;
+        window.location.href = '/profile';
     })
     .catch(error => {
         // Ошибка проверки токена
         console.error('Error:', error);
-        document.body.innerHTML = '<h2>Ошибка авторизации. Токен недействителен.</h2>';
+        document.body.innerHTML = '<h2>Токен недействителен. Авторизируйтесь заново.</h2>';
         localStorage.removeItem('access_token'); // Удаляем недействительный токен
         localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
-        setTimeout(() => window.location.href = '/', 15000);
+        setTimeout(() => window.location.href = '/', 5000);
+
+        fetch('http://localhost:8080/api/refreshtoken', {
+            method: 'POST',
+            headers: {
+            'Authorization': localStorage.getItem('refresh_token'), // Передаем токен в заголовке
+            'Content-Type': 'application/json'
+        }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Token invalid or expired');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Успешная проверка токена
+            // Сохраняем токен в localStorage
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+            window.location.href = '/profile';
+        })
+        .catch(error => {
+            // Ошибка проверки токена
+            console.error('Error:', error);
+        })
     });
 });
 
@@ -72,7 +97,7 @@ async function handlelogin() {
         // Сохраняем токен в localStorage
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
-        alert('Login successful!');
+        window.location.href = '/profile';
     } catch (err) {
         alert('Error: ' + err.message);
     }

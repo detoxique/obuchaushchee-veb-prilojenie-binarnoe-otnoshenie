@@ -119,7 +119,6 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error dumping request: %v\n", err)
 		return
 	}
-	//fmt.Printf("Request Dump:\n%s\n", string(dump))
 
 	token := ExtractJWT(string(dump))
 	if token == "" {
@@ -140,6 +139,56 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Auth server error", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Server Error " + (string)(resp.StatusCode))
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+	w.Write(body)
+}
+
+func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Method not allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Вытаскиваем токен из запроса
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Extract failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Internal error")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/refreshtoken", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Auth server error", http.StatusInternalServerError)
 		return
@@ -192,6 +241,7 @@ func Run(ctx context.Context) error {
 	// API
 	http.HandleFunc("/api/login", handleLogin)
 	http.HandleFunc("/api/verify", handleVerifyToken)
+	http.HandleFunc("/api/refreshtoken", handleRefreshToken)
 
 	go func() {
 		<-ctx.Done()

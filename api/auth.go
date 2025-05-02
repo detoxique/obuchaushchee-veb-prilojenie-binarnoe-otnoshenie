@@ -58,7 +58,12 @@ func debugToken(tokenString string) {
 	}
 }
 
-func CheckToken(tokenString string) (bool, error) {
+func GetUsernameGromToken(tokenString string) string {
+	token, _, _ := jwt.NewParser().ParseUnverified(tokenString, &CustomClaims{})
+	return token.Claims.(*CustomClaims).Username
+}
+
+func CheckAccessToken(tokenString string) (bool, error) {
 	debugToken(tokenString)
 
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -67,6 +72,23 @@ func CheckToken(tokenString string) (bool, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return accessTokenSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		return false, fmt.Errorf("invalid token: %v", err)
+	}
+
+	fmt.Println("Token validated correctly!")
+	return true, nil
+}
+
+func CheckRefreshToken(tokenString string) (bool, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Проверяем, что алгоритм подписи тот же, что использовался при генерации
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return refreshTokenSecret, nil
 	})
 
 	if err != nil || !token.Valid {

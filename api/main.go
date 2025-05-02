@@ -130,15 +130,7 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 	token = removeCharAtIndex(token, 0)
 	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
 
-	// Чтение JSON
-	/*er := json.NewDecoder(r.Body).Decode(&token)
-	if er != nil {
-		log.Println("Unable to decode")
-		http.Error(w, "Invalid request. Unable to decode", http.StatusBadRequest)
-		return
-	}*/
-
-	tokenCheck, err := CheckToken(token)
+	tokenCheck, err := CheckAccessToken(token)
 	if err != nil {
 		log.Println("Token validate failed. " + err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -154,11 +146,69 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Получение access токена по refresh токену
+func refreshToken(w http.ResponseWriter, r *http.Request) {
+	// Обрабатывать только POST запросы
+	if r.Method != "POST" {
+		log.Println("Method not allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Вытаскиваем токен из запроса
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+	fmt.Printf("Request Dump:\n%s\n", string(dump))
+
+	token, err := ExtractBodyFromRequest(r)
+	if err != nil {
+		log.Println("Extract failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	token = removeCharAtIndex(token, 0)
+	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
+
+	tokenCheck, err := CheckRefreshToken(token)
+	if err != nil {
+		log.Println("Token validate failed. " + err.Error())
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if !tokenCheck {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	// Если refresh токен валиден, генерируем новый access токен
+	accessToken, err := GenerateAccessToken(GetUsernameGromToken(token))
+	if err != nil {
+		log.Println("Failed to generate token. " + err.Error())
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// Формируем ответ
+	response := Response{
+		AccessToken:  accessToken,
+		RefreshToken: token,
+	}
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	//json.NewEncoder(w).Encode(Response{Message: message})
 }
 
 // ExtractBodyFromRequest извлекает тело HTTP-запроса как строку
@@ -202,6 +252,7 @@ func main() {
 
 	http.HandleFunc("/api/auth", handleAuth)
 	http.HandleFunc("/api/verify", verifyToken)
+	http.HandleFunc("/api/refreshtoken", refreshToken)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)

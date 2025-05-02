@@ -4,7 +4,6 @@
 
 html,
 h1,
-h2,
 h3,
 h4,
 h5 {
@@ -13,12 +12,24 @@ h5 {
     font-weight: 600;
 
 }
-body{
-    background: #CECECE;
+body {
+    font-family: sans-serif;
+    background-color: #CECECE;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
 }
 a{
     text-decoration: none;
     color: inherit;
+}
+
+h2 {
+    color: #000000;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
 }
 
 /*
@@ -28,6 +39,13 @@ a{
 header{
     background: #6D9B50;
     height: 64px;
+    color: white;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 header h1{
     margin-top: 12px;
@@ -40,4 +58,157 @@ header h1 a{
 header h1 a:hover{
     color: #ffffff;
     margin-top: 6px;
+}
+
+/*
+    BODY
+*/
+.container-info {
+    margin-top: 128px;
+    width: 80%; /* Adjust as needed */
+    max-width: 800px; /* Maximum width for larger screens */
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; /*Stretch items to fill the container width*/
+}
+
+.profile-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+}
+
+.profile-icon {
+    width: 60px;
+    height: 60px;
+    background-color: #eee;
+    border-radius: 50%;
+    margin-right: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    color: #888;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-info h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.profile-info p {
+    margin: 5px 0;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.grades-section {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+.grades-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.grades-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.grades-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.grades-list li:last-child {
+    border-bottom: none;
+}
+
+.courses-section {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.course-search {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.course-search input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+.course-search button {
+    background-color: #ddd;
+    color: #333;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.course-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.course-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.course-list li:last-child {
+    border-bottom: none;
+}
+
+/* Performance Styling */
+.performance {
+    text-align: center;
+}
+
+.percentage {
+    font-size: 3em; /* Increase the size */
+    font-weight: bold;
+    color: #2e7d32; /* Or any other suitable color */
+}
+
+.more-grades{
+    text-align: right;
+    margin-top: 10px;
+}
+
+.more-grades a{
+    text-decoration: none;
+    color: #7cb342;
+
 }
