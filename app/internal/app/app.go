@@ -23,6 +23,12 @@ type TokenResponse struct {
 	AccessToken string `json:"Authorization"`
 }
 
+type ProfilePageData struct {
+	Username string
+	Role     string
+	Group    string
+}
+
 // Страница авторизации
 func serveLoginPage(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("templates/index.html")
@@ -43,8 +49,20 @@ func serveProfilePage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// Страница оценок
+func serveMarksPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/marks.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
 // Страница админ панели
 func serveAdminPage(w http.ResponseWriter, r *http.Request) {
+	// TODO: Проверять, авторизован ли пользователь в учетку админа
+
 	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -235,6 +253,7 @@ func Run(ctx context.Context) error {
 	// HTML
 	http.HandleFunc("/", serveLoginPage)
 	http.HandleFunc("/profile", serveProfilePage)
+	http.HandleFunc("/marks", serveMarksPage)
 	http.HandleFunc("/admin", serveAdminPage)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

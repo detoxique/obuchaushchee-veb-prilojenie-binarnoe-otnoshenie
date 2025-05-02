@@ -1,0 +1,98 @@
+:root {
+    --focus_color: #6D9B50
+}
+
+html,
+h1 {
+    color: #ffffff;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+
+}
+body {
+    font-family: sans-serif;
+    background-color: #CECECE;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+}
+a{
+    text-decoration: none;
+    color: inherit;
+}
+
+h2 {
+    color: #000000;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+}
+
+/*
+    HEADER
+*/
+
+header{
+    background: #6D9B50;
+    height: 64px;
+    color: white;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+header h1{
+    margin-top: 12px;
+    font-size: 32px;
+    white-space: nowrap;
+}
+header h1 a{
+    color: #ffffff;
+    margin-top: 6px;
+}
+header h1 a:hover{
+    color: #ffffff;
+    margin-top: 6px;
+}
+
+header h5{
+    margin-top: 18px;
+    font-size: 22px;
+    font-weight: 400;
+}
+header h5 a{
+    color: #ffffff;
+}
+
+.marks-info {
+    margin-top: 128px;
+    width: 60%;
+    height: 700px;
+    max-width: 800px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.marks-info h3 {
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+}
+
+
+.marks-section li {
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}

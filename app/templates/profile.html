@@ -27,6 +27,14 @@
                         <a href="/">Образовательный портал</a> 
                     </h1>
                 </div>
+                <div class="col">
+                  
+                </div>
+                <div class="col">
+                  <h5>
+                    <a href="/profile">Профиль</a> 
+                  </h5>
+                </div>
             </div>
         </div>
     </header>
@@ -38,9 +46,9 @@
               <i class="fas fa-user"></i>
           </div>
           <div class="profile-info">
-              <h2>Фамилия Имя Отчество</h2>
-              <p>Студент</p>
-              <p>Группа: 000000</p>
+              <h2>{{.Username}}</h2>
+              <p>{{.Role}}</p>
+              <p>Группа: {{.Group}}</p>
           </div>
       </div>
 
@@ -64,7 +72,7 @@
           </ul>
 
           <div class="more-grades">
-              <a href="#">Подробнее</a>
+              <a href="/marks">Подробнее</a>
           </div>
       </div>
 
@@ -76,8 +84,8 @@
           </div>
 
           <ul class="course-list">
-              <li>Дискретная математика<br class="under">1 Тест до 01.02.2025!</li>
-              <li>Теория вероятностей и математическая статистика<br class="under">2 Теста до 06.02.2025!</li>
+              <li><a href="#">Дискретная математика</a><br><h4>1 Тест до 01.02.2025!</h4></li>
+              <li><a href="#">Теория вероятностей и математическая статистика</a><br><h4>2 Теста до 06.02.2025!</h4></li>
           </ul>
       </div>
   </div>

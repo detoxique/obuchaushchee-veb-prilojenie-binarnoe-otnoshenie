@@ -45,11 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
         // Ошибка проверки токена
-        console.error('Error:', error);
-        document.body.innerHTML = '<h2>Токен недействителен. Авторизируйтесь заново.</h2>';
+        //console.error('Error:', error);
         localStorage.removeItem('access_token'); // Удаляем недействительный токен
-        localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
-        setTimeout(() => window.location.href = '/', 5000);
+        //localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
+        //setTimeout(() => window.location.href = '/', 5000);
 
         fetch('http://localhost:8080/api/refreshtoken', {
             method: 'POST',
@@ -74,6 +73,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             // Ошибка проверки токена
             console.error('Error:', error);
+            localStorage.removeItem('access_token'); // Удаляем недействительный токен
+            localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
         })
     });
 });
