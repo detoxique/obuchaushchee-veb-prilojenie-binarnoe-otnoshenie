@@ -242,6 +242,22 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var mostPopular string
+	if Stats.ПосещенияАдминПанель > Stats.ПосещенияПрофль && Stats.ПосещенияАдминПанель > Stats.ПосещенияОценки && Stats.ПосещенияАдминПанель > Stats.ПосещенияКурсы {
+		mostPopular = "Админ Панель"
+	} else if Stats.ПосещенияПрофль > Stats.ПосещенияАдминПанель && Stats.ПосещенияПрофль > Stats.ПосещенияОценки && Stats.ПосещенияПрофль > Stats.ПосещенияКурсы {
+		mostPopular = "Профиль"
+	} else if Stats.ПосещенияОценки > Stats.ПосещенияПрофль && Stats.ПосещенияОценки > Stats.ПосещенияАдминПанель && Stats.ПосещенияОценки > Stats.ПосещенияКурсы {
+		mostPopular = "Оценки"
+	} else {
+		mostPopular = "Курсы"
+	}
+
+	stat := StatsToView{
+		ВсегоПосещений:          Stats.ПосещенияАдминПанель + Stats.ПосещенияОценки + Stats.ПосещенияПрофль + Stats.ПосещенияКурсы,
+		СамаяПопулярнаяСтраница: mostPopular,
+	}
+
 	// Создание HTML кода для вставки
 	page := `<!DOCTYPE html>
 <html lang="ru">
@@ -542,7 +558,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.Execute(w, nil)
+	tmpl.Execute(w, stat)
 }
 
 // Получение страницы профиля с данными
