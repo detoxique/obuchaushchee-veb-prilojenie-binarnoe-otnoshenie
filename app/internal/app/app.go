@@ -315,7 +315,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
             background-color: #555;
         }
 
-        .form-section, .groups-section, .users-section, .backup-section, .stats-section {
+        .form-section, .groups-add-section, .groups-section, .users-section, .backup-section, .stats-section {
             margin-bottom: 20px;
             border: 1px solid #ddd;
             padding: 15px;
@@ -323,7 +323,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
             background-color: #f9f9f9;
         }
 
-        .form-section h2, .groups-section h2, .users-section h2, .backup-section h2, .stats-section h2 {
+        .form-section h2, .groups-add-section h2, .groups-section h2, .users-section h2, .backup-section h2, .stats-section h2 {
             margin-top: 0;
             margin-bottom: 15px;
         }
@@ -334,7 +334,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
             font-weight: bold;
         }
 
-        input[type="login"], input[type="password"], select[type="role"], select[type="group"] {
+        input[type="login"], input[type="password"], input[type="groupname"], select[type="role"], select[type="group"] {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -471,14 +471,11 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	groups := adminData.Groups
 	users := adminData.Users
 
-	adminHTML.GroupsHTMLSelector = "<select>"
-
 	for i := 0; i < len(groups); i++ {
 		adminHTML.GroupsForSelector += `<option value="` + groups[i].Name + `">` + groups[i].Name + "</option>"
-		adminHTML.GroupsHTML += "<span>" + groups[i].Name + `</span><button class="delete-button">Удалить</button>` + "\n"
+		adminHTML.GroupsHTML += "<li><span>" + groups[i].Name + `</span><button class="delete-button">Удалить</button></li>` + "\n"
 	}
-	adminHTML.GroupsHTMLSelector += adminHTML.GroupsForSelector
-	adminHTML.GroupsHTMLSelector += "</select>"
+
 	page += adminHTML.GroupsForSelector
 
 	var usersSection string
@@ -501,7 +498,16 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
                     </select>`
 		}
 
-		usersSection += adminHTML.GroupsHTMLSelector
+		grps := `<select>
+                      <option value="` + users[i].GroupName + `">` + users[i].GroupName + `</option>`
+		for j := 0; j < len(groups); j++ {
+			if groups[j].Name != users[i].GroupName {
+				grps += `<option value="` + groups[j].Name + `">` + groups[j].Name + `</option>`
+			}
+		}
+		grps += "</select>"
+
+		usersSection += grps
 		usersSection += `<button class="delete-button">Удалить</button>
                 </li>`
 	}
@@ -512,12 +518,21 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
             </form>
         </div>
 
+        <div id="add-group" class="groups-add-section">
+            <h2>Добавить группу</h2>
+            <form>
+                <label for="groupname">Название группы:</label>
+                <input type="groupname" id="groupname" name="groupname" required>
+                <button type="addgroup">Добавить группу</button>
+            </form>
+        </div>
+
         <div id="groups" class="groups-section">
             <h2>Управление группами</h2>
             <ul class="groups-list">
-                <li>`
+                `
 	page += adminHTML.GroupsHTML
-	page += `</li>
+	page += `
             </ul>
         </div>
 
