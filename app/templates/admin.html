@@ -54,7 +54,7 @@
             background-color: #555;
         }
 
-        .form-section, .users-section, .backup-section, .stats-section {
+        .form-section, .groups-section, .users-section, .backup-section, .stats-section {
             margin-bottom: 20px;
             border: 1px solid #ddd;
             padding: 15px;
@@ -62,7 +62,7 @@
             background-color: #f9f9f9;
         }
 
-        .form-section h2, .users-section h2, .backup-section h2, .stats-section h2 {
+        .form-section h2, .groups-section h2, .users-section h2, .backup-section h2, .stats-section h2 {
             margin-top: 0;
             margin-bottom: 15px;
         }
@@ -73,7 +73,7 @@
             font-weight: bold;
         }
 
-        input[type="login"], input[type="password"], select[type="role"] {
+        input[type="login"], input[type="password"], select[type="role"], select[type="group"] {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -94,6 +94,24 @@
 
         button:hover {
             background-color: #3e8e41;
+        }
+
+        .groups-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .groups-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .groups-list li:last-child {
+            border-bottom: none;
         }
 
         .user-list {
@@ -156,7 +174,7 @@
     </style>
 </head>
 <body>
-
+    <script src="../static/js/admin.js"></script>
     <div class="container">
         <h1>Админ панель</h1>
 
@@ -185,8 +203,22 @@
                   <option value="Админ">Админ</option>
                 </select>
 
+                <label for="group">Группа:</label>
+                <select type="group"> 
+                  {{.GroupsForSelector}}
+                </select>
+
                 <button type="submit">Добавить пользователя</button>
             </form>
+        </div>
+
+        <div id="groups" class="groups-section">
+            <h2>Управление группами</h2>
+            <ul class="groups-list">
+                <li>
+                    {{.GroupsHTML}}
+                </li>
+            </ul>
         </div>
 
         <div id="users" class="users-section">
@@ -251,6 +283,6 @@
             </ul>
         </div>
     </div>
-    <script src="../static/js/admin.js"></script>
+    
 </body>
 </html>
