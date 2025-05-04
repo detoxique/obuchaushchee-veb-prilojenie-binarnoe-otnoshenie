@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"time"
 	"unicode/utf8"
 
 	_ "github.com/lib/pq"
@@ -37,12 +38,20 @@ type TokenResponse struct {
 	AccessToken string `json:"Authorization"`
 }
 
+// Оценка
+type Mark struct {
+	Course    string    `json:"Course"`
+	Date      time.Time `json:"Date"`
+	MarkValue string    `json:"MarkValue"`
+}
+
 // Данные страницы профиля
 type ProfilePageData struct {
 	Username              string `json:"Username"`
 	Role                  string `json:"Role"`
 	Group                 string `json:"Group"`
 	PerformancePercentage int    `json:"PerformancePersentage"`
+	Marks                 []Mark `json:"Marks"`
 }
 
 // Авторизация
@@ -141,6 +150,60 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+}
+
+// Подтверждение токена админа
+func verifyAdmin(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на верификацию токена админа")
+	// Обрабатывать только POST запросы
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token, err := extractToken(w, r)
+	if err != nil {
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	}
+
+	tokenCheck, err := CheckAccessToken(token)
+	if err != nil {
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	if !tokenCheck {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	username := GetUsernameGromToken(token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role string
+	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if role == "admin" {
+		log.Println("Пользователь является администратором")
+		w.WriteHeader(http.StatusOK)
+	} else {
+		log.Println("Пользователь не является администратором")
+		w.WriteHeader(http.StatusUnauthorized)
+	}
 }
 
 // Получение access токена по refresh токену
@@ -259,6 +322,16 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// Добавление пользователя через админ панель
+func addUser(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Удаление пользователя через админ панель
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // Отправление сообщения об ошибке
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
@@ -329,11 +402,12 @@ func main() {
 
 	http.HandleFunc("/api/auth", handleAuth)
 	http.HandleFunc("/api/verify", verifyToken)
+	http.HandleFunc("/api/verifyadmin", verifyAdmin)
 	http.HandleFunc("/api/refreshtoken", refreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
 
-	http.HandleFunc("/api/admin/adduser", verifyToken)
-	http.HandleFunc("/api/admin/deleteuser", verifyToken)
+	http.HandleFunc("/api/admin/adduser", addUser)
+	http.HandleFunc("/api/admin/deleteuser", deleteUser)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)

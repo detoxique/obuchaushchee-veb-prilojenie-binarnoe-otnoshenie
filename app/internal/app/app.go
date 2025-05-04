@@ -38,6 +38,11 @@ type Statistics struct {
 	ПосещенияКурсы       int64 `json:"ПосещенияКурсы"`
 }
 
+type StatsToView struct {
+	ВсегоПосещений          int64  `json:"ВсегоПосещений"`
+	СамаяПопулярнаяСтраница string `json:"СамаяПопулярнаяСтраница"`
+}
+
 var Stats Statistics
 
 // Страница авторизации
@@ -100,14 +105,86 @@ func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 
 	Stats.ПосещенияАдминПанель++
 
+	var mostPopular string
+	if Stats.ПосещенияАдминПанель > Stats.ПосещенияПрофль && Stats.ПосещенияАдминПанель > Stats.ПосещенияОценки && Stats.ПосещенияАдминПанель > Stats.ПосещенияКурсы {
+		mostPopular = "Админ Панель"
+	} else if Stats.ПосещенияПрофль > Stats.ПосещенияАдминПанель && Stats.ПосещенияПрофль > Stats.ПосещенияОценки && Stats.ПосещенияПрофль > Stats.ПосещенияКурсы {
+		mostPopular = "Профиль"
+	} else if Stats.ПосещенияОценки > Stats.ПосещенияПрофль && Stats.ПосещенияОценки > Stats.ПосещенияАдминПанель && Stats.ПосещенияОценки > Stats.ПосещенияКурсы {
+		mostPopular = "Оценки"
+	} else {
+		mostPopular = "Курсы"
+	}
+
+	stat := StatsToView{
+		ВсегоПосещений:          Stats.ПосещенияАдминПанель + Stats.ПосещенияОценки + Stats.ПосещенияПрофль + Stats.ПосещенияКурсы,
+		СамаяПопулярнаяСтраница: mostPopular,
+	}
+
 	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, nil)
+	tmpl.Execute(w, stat)
 
 	UpdateStats()
+}
+
+// Получение страницы профиля с данными
+func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных админ панели")
+	// Принимаются только GET запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyadmin", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка прошла успешно
+
 }
 
 // Получение страницы профиля с данными
@@ -442,6 +519,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/verify", handleVerifyToken)
 	http.HandleFunc("/api/refreshtoken", handleRefreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
+	http.HandleFunc("/api/getadminpaneldata", getAdminPanelData)
 
 	go func() {
 		<-ctx.Done()
