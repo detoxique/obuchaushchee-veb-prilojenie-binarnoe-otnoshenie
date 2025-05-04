@@ -150,13 +150,32 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Получен успешный ответ")
 
 	// Успешный ответ
-	body, err = io.ReadAll(respData.Body)
+	var profileData ProfilePageData
+
+	err = json.NewDecoder(respData.Body).Decode(&profileData)
 	if err != nil {
-		slog.Info("Не удалось считать данные ответа сервера")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		slog.Info("Не удалось считать данные профиля")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
-	slog.Info(string(body))
+
+	slog.Info(profileData.Role)
+	if profileData.Role == "student" {
+		profileData.Role = "Студент"
+	} else if profileData.Role == "teacher" {
+		profileData.Role = "Преподаватель"
+	}
+
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/profile.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы профиля")
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, profileData)
 }
 
 // Авторизация
@@ -213,10 +232,10 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Got verify request")
+	slog.Info("Получен запрос на подтверждение токена")
 	if r.Method != "POST" {
-		slog.Info("Method not allowed")
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -228,25 +247,23 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 
 	token := ExtractJWT(string(dump))
 	if token == "" {
-		slog.Info("Extract failed")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		slog.Info("Не удалось вытащить токен")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(&token)
 	if err != nil {
-		slog.Info("Internal error")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
-
-	slog.Info("Sent verify request")
 
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		http.Error(w, "Auth server error", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
@@ -254,7 +271,6 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	// Чтение ответа от другого сервера
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Server Error " + (string)(resp.StatusCode))
 		w.Header().Set("Content-Type", "application/json")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
@@ -266,8 +282,8 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 
 func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		slog.Info("Method not allowed")
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -280,23 +296,23 @@ func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	token := ExtractJWT(string(dump))
 	if token == "" {
-		slog.Info("Extract failed")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		slog.Info("Ошибка озвлечения токена")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(&token)
 	if err != nil {
-		slog.Info("Internal error")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/refreshtoken", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		http.Error(w, "Auth server error", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
@@ -305,7 +321,6 @@ func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Server Error " + (string)(resp.StatusCode))
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)

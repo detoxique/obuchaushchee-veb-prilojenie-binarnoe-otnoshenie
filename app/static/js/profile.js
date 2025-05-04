@@ -34,14 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (!response.ok) {
-                
                 throw new Error('Token invalid or expired');
             }
-            return response.json();
+            return response.text();
         })
         .then(data => {
-            // Успешная проверка токена
-            
+            // Страница получена успешно
+            console.log(data)
+            document.body.innerHTML = data
         })
         .catch(error => {
             // Ошибка проверки токена

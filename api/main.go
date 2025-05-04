@@ -256,7 +256,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	// Отправляем JSON-ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(jsonData)
+	json.NewEncoder(w).Encode(data)
 }
 
 // Отправление сообщения об ошибке
