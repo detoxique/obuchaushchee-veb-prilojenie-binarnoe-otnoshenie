@@ -24,9 +24,10 @@ type TokenResponse struct {
 }
 
 type ProfilePageData struct {
-	Username string
-	Role     string
-	Group    string
+	Username              string `json:"Username"`
+	Role                  string `json:"Role"`
+	Group                 string `json:"Group"`
+	PerformancePercentage int    `json:"PerformancePersentage"`
 }
 
 // Страница авторизации
@@ -46,6 +47,7 @@ func serveProfilePage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
+
 	tmpl.Execute(w, nil)
 }
 
@@ -71,10 +73,96 @@ func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// Получение страницы профиля с данными
+func getProfileData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных профиля")
+	// Принимаются только GET запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Получение данных
+
+	slog.Info("Токен валиден. Отправлен запрос на получение данных")
+	// Отправка запроса на другой сервер
+	respData, err := http.Post("http://localhost:1337/api/getprofiledata", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer respData.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if respData.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(respData.Body)
+		w.WriteHeader(respData.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	slog.Info("Получен успешный ответ")
+
+	// Успешный ответ
+	body, err = io.ReadAll(respData.Body)
+	if err != nil {
+		slog.Info("Не удалось считать данные ответа сервера")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+	slog.Info(string(body))
+}
+
 // Авторизация
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -82,24 +170,24 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
-		slog.Info("Failed to read auth data")
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
 
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(loginData)
 	if err != nil {
-		slog.Info("Failed to create json")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		slog.Info("Не удалось создать JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/auth", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		slog.Info("Failed to send. Auth server error")
-		http.Error(w, "Auth server error", http.StatusInternalServerError)
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
@@ -108,7 +196,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Auth server error")
+		slog.Info("Ошибка сервера авторизации")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -118,7 +206,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Успешный ответ
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		http.Error(w, "Error reading response", http.StatusInternalServerError)
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
 		return
 	}
 	w.Write(body)
@@ -164,10 +252,10 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
 		slog.Info("Server Error " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -244,7 +332,7 @@ func ExtractJWT(request string) string {
 }
 
 func Run(ctx context.Context) error {
-	slog.Info("starting server")
+	slog.Info("Сервер запущен. Порт: 8080")
 
 	s := http.Server{
 		Addr: ":8080",
@@ -255,12 +343,14 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/profile", serveProfilePage)
 	http.HandleFunc("/marks", serveMarksPage)
 	http.HandleFunc("/admin", serveAdminPage)
+
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// API
 	http.HandleFunc("/api/login", handleLogin)
 	http.HandleFunc("/api/verify", handleVerifyToken)
 	http.HandleFunc("/api/refreshtoken", handleRefreshToken)
+	http.HandleFunc("/api/getprofiledata", getProfileData)
 
 	go func() {
 		<-ctx.Done()

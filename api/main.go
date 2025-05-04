@@ -37,11 +37,19 @@ type TokenResponse struct {
 	AccessToken string `json:"Authorization"`
 }
 
+// Данные страницы профиля
+type ProfilePageData struct {
+	Username              string `json:"Username"`
+	Role                  string `json:"Role"`
+	Group                 string `json:"Group"`
+	PerformancePercentage int    `json:"PerformancePersentage"`
+}
+
 // Авторизация
 func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Обрабатывать только POST запросы
 	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -50,8 +58,8 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
-		log.Println("Invalid request")
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -59,35 +67,35 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	var storedHash string
 	err = db.QueryRow("SELECT password FROM users WHERE username = $1", loginData.Username).Scan(&storedHash)
 	if err == sql.ErrNoRows {
-		log.Println("Invalid credentials")
-		sendError(w, "Invalid credentials", http.StatusUnauthorized)
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
 		return
 	} else if err != nil {
-		log.Println("Database error")
-		sendError(w, "Database error "+err.Error(), http.StatusInternalServerError)
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Проверка пароля
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(loginData.Password))
 	if err != nil {
-		log.Println("Invalid credentials")
-		sendError(w, "Invalid credentials", http.StatusUnauthorized)
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
 		return
 	}
 
 	// Генерация токенов
 	accessToken, err := GenerateAccessToken(loginData.Username)
 	if err != nil {
-		log.Println("Failed to generate access token" + err.Error())
-		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+		log.Println("Не удалось создать access токен" + err.Error())
+		http.Error(w, "Не удалось создать access токен", http.StatusInternalServerError)
 		return
 	}
 
 	refreshToken, err := GenerateRefreshToken(loginData.Username)
 	if err != nil {
-		log.Println("Failed to generate refresh token")
-		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+		log.Println("Не удалось создать refresh токен")
+		http.Error(w, "Не удалось создать refresh токен", http.StatusInternalServerError)
 		return
 	}
 
@@ -105,35 +113,24 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 // Подтверждение токена
 func verifyToken(w http.ResponseWriter, r *http.Request) {
-	log.Println("Got verify request")
+	log.Println("Получен запрос на верификацию токена")
 	// Обрабатывать только POST запросы
 	if r.Method != "POST" {
-		log.Println("Method not allowed")
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
-	dump, err := httputil.DumpRequest(r, true)
+	token, err := extractToken(w, r)
 	if err != nil {
-		fmt.Printf("Error dumping request: %v\n", err)
-		return
-	}
-	fmt.Printf("Request Dump:\n%s\n", string(dump))
-
-	token, err := ExtractBodyFromRequest(r)
-	if err != nil {
-		log.Println("Extract failed")
+		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
 	}
-
-	token = removeCharAtIndex(token, 0)
-	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
 
 	tokenCheck, err := CheckAccessToken(token)
 	if err != nil {
-		log.Println("Token validate failed. " + err.Error())
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
@@ -150,33 +147,21 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 func refreshToken(w http.ResponseWriter, r *http.Request) {
 	// Обрабатывать только POST запросы
 	if r.Method != "POST" {
-		log.Println("Method not allowed")
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Вытаскиваем токен из запроса
-	dump, err := httputil.DumpRequest(r, true)
+	token, err := extractToken(w, r)
 	if err != nil {
-		fmt.Printf("Error dumping request: %v\n", err)
-		return
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
-	fmt.Printf("Request Dump:\n%s\n", string(dump))
-
-	token, err := ExtractBodyFromRequest(r)
-	if err != nil {
-		log.Println("Extract failed")
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
-	}
-
-	token = removeCharAtIndex(token, 0)
-	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
 
 	tokenCheck, err := CheckRefreshToken(token)
 	if err != nil {
-		log.Println("Token validate failed. " + err.Error())
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
@@ -188,8 +173,8 @@ func refreshToken(w http.ResponseWriter, r *http.Request) {
 	// Если refresh токен валиден, генерируем новый access токен
 	accessToken, err := GenerateAccessToken(GetUsernameGromToken(token))
 	if err != nil {
-		log.Println("Failed to generate token. " + err.Error())
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		log.Println("Не удалось создать access токен. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
@@ -205,14 +190,106 @@ func refreshToken(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// Получение данных профиля по токену
+func getProfileData(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на получение данных профиля")
+	// Принимаются только POST запросы
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Вытаскиваем токен и получаем из него имя пользователя
+	token, err := extractToken(w, r)
+	if err != nil {
+		log.Println("Ошибка при проверке токена. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	}
+
+	username := GetUsernameGromToken(token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role, group string
+	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Роль пользователя " + username + ": " + role)
+
+	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Группа пользователя " + username + ": " + group)
+
+	data := ProfilePageData{
+		Username:              username,
+		Role:                  role,
+		Group:                 group,
+		PerformancePercentage: 100,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Ошибка в преобразовании в JSON")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+	log.Println(string(jsonData))
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(jsonData)
+}
+
+// Отправление сообщения об ошибке
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 }
 
+func extractToken(w http.ResponseWriter, r *http.Request) (string, error) {
+	// Вытаскиваем токен из запроса
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		//fmt.Printf("Error dumping request: %v\n", err)
+		return "", err
+	}
+	fmt.Printf("Request Dump:\n%s\n", string(dump))
+
+	token, err := extractBodyFromRequest(r)
+	if err != nil {
+		log.Println("Не удалось извлечь токен")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return "", err
+	}
+
+	token = removeCharAtIndex(token, 0)
+	token = removeCharAtIndex(token, utf8.RuneCountInString(token)-1)
+
+	return token, nil
+}
+
 // ExtractBodyFromRequest извлекает тело HTTP-запроса как строку
-func ExtractBodyFromRequest(r *http.Request) (string, error) {
+func extractBodyFromRequest(r *http.Request) (string, error) {
 	// Читаем тело запроса
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -253,6 +330,7 @@ func main() {
 	http.HandleFunc("/api/auth", handleAuth)
 	http.HandleFunc("/api/verify", verifyToken)
 	http.HandleFunc("/api/refreshtoken", refreshToken)
+	http.HandleFunc("/api/getprofiledata", getProfileData)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)
