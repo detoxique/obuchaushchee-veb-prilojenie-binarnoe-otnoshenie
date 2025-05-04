@@ -332,6 +332,9 @@ func main() {
 	http.HandleFunc("/api/refreshtoken", refreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
 
+	http.HandleFunc("/api/admin/adduser", verifyToken)
+	http.HandleFunc("/api/admin/deleteuser", verifyToken)
+
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)
 	if err != nil {

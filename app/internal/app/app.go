@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"strings"
 )
 
@@ -30,6 +31,15 @@ type ProfilePageData struct {
 	PerformancePercentage int    `json:"PerformancePersentage"`
 }
 
+type Statistics struct {
+	ПосещенияПрофль      int64 `json:"ПосещенияПрофль"`
+	ПосещенияАдминПанель int64 `json:"ПосещенияАдминПанель"`
+	ПосещенияОценки      int64 `json:"ПосещенияОценки"`
+	ПосещенияКурсы       int64 `json:"ПосещенияКурсы"`
+}
+
+var Stats Statistics
+
 // Страница авторизации
 func serveLoginPage(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("templates/index.html")
@@ -42,6 +52,8 @@ func serveLoginPage(w http.ResponseWriter, r *http.Request) {
 
 // Страница Профиля
 func serveProfilePage(w http.ResponseWriter, r *http.Request) {
+	Stats.ПосещенияПрофль++
+
 	tmpl, err := template.ParseFiles("templates/profile.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -49,21 +61,44 @@ func serveProfilePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl.Execute(w, nil)
+
+	UpdateStats()
+}
+
+// Страница Профиля
+func serveCoursesPage(w http.ResponseWriter, r *http.Request) {
+	Stats.ПосещенияКурсы++
+
+	tmpl, err := template.ParseFiles("templates/courses.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, nil)
+
+	UpdateStats()
 }
 
 // Страница оценок
 func serveMarksPage(w http.ResponseWriter, r *http.Request) {
+	Stats.ПосещенияОценки++
+
 	tmpl, err := template.ParseFiles("templates/marks.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
 	tmpl.Execute(w, nil)
+
+	UpdateStats()
 }
 
 // Страница админ панели
 func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Проверять, авторизован ли пользователь в учетку админа
+
+	Stats.ПосещенияАдминПанель++
 
 	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
@@ -71,6 +106,8 @@ func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tmpl.Execute(w, nil)
+
+	UpdateStats()
 }
 
 // Получение страницы профиля с данными
@@ -164,6 +201,16 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 		profileData.Role = "Студент"
 	} else if profileData.Role == "teacher" {
 		profileData.Role = "Преподаватель"
+	} else {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		tmpl, err := template.ParseFiles("templates/admin.html")
+		if err != nil {
+			slog.Info("Не удалось получить шаблон страницы профиля")
+			http.Error(w, "Template error", http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
 	}
 
 	// Отправление страницы пользователю
@@ -346,6 +393,21 @@ func ExtractJWT(request string) string {
 	return ""
 }
 
+// Обновить файл статистики
+func UpdateStats() {
+	// Сериализация в JSON (с форматированием)
+	jsonData, err := json.MarshalIndent(Stats, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	// Запись в файл "stats.json"
+	err = os.WriteFile("stats.json", jsonData, 0644) // Права 0644 (rw-r--r--)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func Run(ctx context.Context) error {
 	slog.Info("Сервер запущен. Порт: 8080")
 
@@ -353,11 +415,25 @@ func Run(ctx context.Context) error {
 		Addr: ":8080",
 	}
 
+	// Загрузка статистики
+
+	// Чтение файла
+	fileData, err := os.ReadFile("stats.json")
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(fileData, &Stats)
+	if err != nil {
+		panic(err)
+	}
+
 	// HTML
 	http.HandleFunc("/", serveLoginPage)
 	http.HandleFunc("/profile", serveProfilePage)
 	http.HandleFunc("/marks", serveMarksPage)
 	http.HandleFunc("/admin", serveAdminPage)
+	http.HandleFunc("/courses", serveCoursesPage)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
