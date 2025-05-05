@@ -834,6 +834,45 @@ func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+// Добавление пользователей
+func handleAddUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+}
+
+// Удаление пользователей
+func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+}
+
+// Добавление групп
+func handleAddGroup(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Удаление групп
+func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Изменение группы пользователя
+func handleChangeUserGroup(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Изменение роли пользователя
+func handleChangeUserRole(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // Извлекает JWT-токен из строки HTTP-запроса
 func ExtractJWT(request string) string {
 	// Разбиваем запрос на строки
@@ -901,6 +940,14 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/refreshtoken", handleRefreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
 	http.HandleFunc("/api/getadminpaneldata", getAdminPanelData)
+
+	http.HandleFunc("/api/admin/adduser", handleAddUser)
+	http.HandleFunc("/api/admin/deleteuser", handleDeleteUser)
+	http.HandleFunc("api/admin/addgroup", handleAddGroup)
+	http.HandleFunc("api/admin/deletegroup", handleDeleteGroup)
+
+	http.HandleFunc("api/admin/changeusergroup", handleChangeUserGroup)
+	http.HandleFunc("api/admin/changeuserrole", handleChangeUserRole)
 
 	go func() {
 		<-ctx.Done()

@@ -1,31 +1,17 @@
-cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28)
+project(CMakeSFMLProject LANGUAGES CXX)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include(FetchContent)
+FetchContent_Declare(SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG 3.0.1
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+    SYSTEM)
+FetchContent_MakeAvailable(SFML)
 
-set(PROJECT_NAME DesktopApp)
-# Set properties that will be used while building TGUI
-set(BUILD_SHARED_LIBS OFF)      # Determines whether TGUI build a static or dynamic/shared library
-set(TGUI_BACKEND SFML_GRAPHICS)  # Sets which backend TGUI will use
-set(SFML_INCLUDE_DIR external/sfml/include)
-set(SFML_LIBRARIES external/sfml/lib)
-set(SFML_DEPENDENCIES external/sfml/bin)
-set(SFML_DIR external/sfml)
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-find_package(SFML REQUIRED COMPONENTS graphics window system) # Look for SFML
-
-include_directories(${SFML_INCLUDE_DIR})
-
-FetchContent_Declare(
-  TGUI
-  GIT_REPOSITORY https://github.com/texus/TGUI
-  GIT_TAG v1.8.0  # Change this to wanted version
-)
-FetchContent_MakeAvailable(TGUI)
-
-project(${PROJECT_NAME})
-
-add_executable(${PROJECT_NAME} src/main.cpp)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE TGUI::TGUI)
-target_link_libraries(${PROJECT_NAME} ${SFML_LIBRARIES} ${SFML_DEPENDENCIES}) # Link SFML and dependencies
+add_executable(main src/main.cpp)
+target_compile_features(main PRIVATE cxx_std_17)
+target_link_libraries(main PRIVATE SFML::Graphics)

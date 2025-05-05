@@ -481,12 +481,20 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 
 // Добавление пользователя через админ панель
 func addUser(w http.ResponseWriter, r *http.Request) {
-
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 // Удаление пользователя через админ панель
 func deleteUser(w http.ResponseWriter, r *http.Request) {
-
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 // Отправление сообщения об ошибке

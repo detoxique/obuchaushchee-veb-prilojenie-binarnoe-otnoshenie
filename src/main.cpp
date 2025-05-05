@@ -1,16 +1,21 @@
-#include <TGUI/TGUI.hpp>
-#include <TGUI/Backend/SFML-Graphics.hpp>
-
-bool runExample(tgui::BackendGui& gui)
-{
-    return true;
-}
+#include <SFML/Graphics.hpp>
 
 int main()
 {
-    sf::RenderWindow window{ {800, 600}, "TGUI example - SFML_GRAPHICS backend" };
+    auto window = sf::RenderWindow(sf::VideoMode({1280u, 720u}), "Binary Relation");
+    window.setFramerateLimit(60);
 
-    tgui::Gui gui{window};
-    if (runExample(gui))
-        gui.mainLoop();
+    while (window.isOpen())
+    {
+        while (const std::optional event = window.pollEvent())
+        {
+            if (event->is<sf::Event::Closed>())
+            {
+                window.close();
+            }
+        }
+
+        window.clear(sf::Color(206, 206, 206, 255));
+        window.display();
+    }
 }
