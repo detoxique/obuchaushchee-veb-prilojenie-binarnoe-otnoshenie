@@ -1,0 +1,8 @@
+/local.properties
+/build
+/build.sh
+/.idea
+/.gradle
+/app/.externalNativeBuild
+/app/.cxx
+/app/build

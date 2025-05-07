@@ -1,32 +1,22 @@
-#include "GUI.h"
-#include <windows.h>
+#include <TGUI/TGUI.hpp>
+#include <TGUI/Backend/SFML-Graphics.hpp>
+
+bool runExample(tgui::BackendGui& gui);
 
 int main()
 {
-    setlocale(LC_ALL, "Rus");
-    auto window = sf::RenderWindow(sf::VideoMode({1280u, 720u}), "Binary Relation");
-    window.setFramerateLimit(60);
+#ifdef TGUI_SYSTEM_IOS
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "TGUI example (SFML-Graphics)");
+#elif SFML_VERSION_MAJOR >= 3
+    sf::RenderWindow window(sf::VideoMode{ {800, 600} }, "TGUI example (SFML-Graphics)");
+#else
+    sf::RenderWindow window({ 800, 600 }, "TGUI example (SFML-Graphics)");
+#endif
 
-    // GUI
-    const sf::Font font("arial.ttf");
-    sf::String btnText = L"Войти";
-    Button btn({600, 345}, font, btnText);
+    tgui::Gui gui(window);
+    if (!runExample(gui))
+        return EXIT_FAILURE;
 
-    while (window.isOpen())
-    {
-        while (const std::optional event = window.pollEvent())
-        {
-            if (event->is<sf::Event::Closed>())
-            {
-                window.close();
-            }
-        }
-
-        window.clear(sf::Color(206, 206, 206, 255));
-
-        // drawing
-        window.draw(btn);
-
-        window.display();
-    }
+    gui.mainLoop(); // To use your own main loop, see https://tgui.eu/tutorials/latest-stable/backend-sfml-graphics/
+    return EXIT_SUCCESS;
 }

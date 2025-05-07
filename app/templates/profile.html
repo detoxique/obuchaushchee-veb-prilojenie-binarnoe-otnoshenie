@@ -1,97 +1,120 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Образовательный портал</title>
+        <title>Образовательный портал</title>
+        <link rel="stylesheet" href="../static/css/profile.css">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <!-- Bootstrap CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     
-    <!-- Custom CSS-->
-    <link rel="stylesheet" href="../static/css/profile.css">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+            <div class="container-fluid">
+              <a class="navbar-brand" href="#">Образовательный портал</a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Курсы</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Успеваемость</a>
+                </li>
+              </ul>
+
+              <div class="profile-button">
+                <div class="d-flex" id="navbarSupportedContent" type="button">
+                    <img src="../static/img/profile-student40x40.jpg" alt="" class="round" href="#">
+                </div>
+              </div>
+            </div>
+        </nav>
+
+        <div class="container-md">
+            <div class="user-card">
+                <div class="profile-pic">
+                    <img src="../static/img/profile-student.jpg" alt="" class="round-big" href="#">
+                </div>
+
+                <div class="user-info" id="app">
+                    <h2>{{ username }}</h2> 
+                    <h3>Группа: </h3>
+                    <h3>Роль</h3>
+                    <button type="button" class="btn btn-outline-danger btn-sm"style="--bs-btn-padding-y: .15rem; --bs-btn-padding-x: 1.25rem; --bs-btn-font-size: .75rem;">Выйти</button>
+                    
+                </div>
+
+                <div class="actual-tests">
+                    <h2>Актуальные тесты</h2>
+                    <hr>
+
+                    <ul class="course-list">
+                        <li><a href="#">Дискретная математика</a><br><h4>1 Тест до 01.02.2025!</h4></li>
+                        <li><a href="#">Теория вероятностей и математическая статистика</a><br><h4>2 Теста до 06.02.2025!</h4></li>
+                        <li><a href="#">Высшая математика</a><br><h4>3 Теста до 06.02.2025!</h4></li>
+                    </ul>
+                    
+                </div>
+
+                
+            </div>
+            <div class="last-courses">
+                <h2>Последние курсы</h2>
+
+                <div class="cards">
+                    <div class="card-1">
+                        <div class="card" style="width: 18rem;">
+                            <div class="card-body">
+                              <h5 class="card-title">Дискретная математика</h5>
+                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 06.05.2025</h6>
+                              <p class="card-text">Описание курса.</p>
+                              <a href="#" class="card-link">Перейти к курсу.</a>
+                            </div>
+                        </div>
+                    </div>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+                    <div class="card-2">
+                        <div class="card" style="width: 18rem;">
+                            <div class="card-body">
+                              <h5 class="card-title">Высшая математика</h5>
+                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 02.05.2025</h6>
+                              <p class="card-text">Описание курса.</p>
+                              <a href="#" class="card-link">Перейти к курсу.</a>
+                            </div>
+                        </div>
+                    </div>
 
-  </head>
-  <body>
-    <!-- header -->
-    <header class="container-fluid">
-        <div class="container">
-            <div class="row">
-                <div class="col">
-                    <h1>
-                        <a href="/">Образовательный портал</a> 
-                    </h1>
-                </div>
-                <div class="col">
-
-                </div>
-                <div class="col">
-                  <h5>
-                    <a href="/profile">Профиль</a> 
-                  </h5>
+                    <div class="card-2">
+                        <div class="card" style="width: 18rem;">
+                            <div class="card-body">
+                              <h5 class="card-title">Теория вероятностей и математическая статистика</h5>
+                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 14.04.2025</h6>
+                              <p class="card-text">Описание курса.</p>
+                              <a href="#" class="card-link">Перейти к курсу.</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </header>
-    <!-- end header -->
-    
-    <div class="container-info">
-      <div class="profile-card">
-          <div class="profile-icon">
-              <i class="fas fa-user"></i>
-          </div>
-          <div class="profile-info">
-              <h2>{{.Username}}</h2>
-              <p>{{.Role}}</p>
-              <p>Группа: {{.Group}}</p>
-          </div>
-      </div>
-
-      <div class="grades-section">
-          <div class="grades-header">
-              <h3>Успеваемость</h3>
-          </div>
-
-          <div class="performance">
-              <span class="percentage">{{.PerformancePercentage}}%</span>
-          </div>
-
-          <div class="grades-header">
-            <h3>Последние оценки</h3>
+            
         </div>
 
-          <ul class="grades-list">
-              <li><span>01.01.2025</span><span>5/5</span></li>
-              <li><span>02.01.2025</span><span>15/15</span></li>
-              <li><span>03.01.2025</span><span>8/8</span></li>
-          </ul>
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        
 
-          <div class="more-grades">
-              <a href="/marks">Подробнее</a>
-          </div>
-      </div>
+        
 
-      <div class="courses-section">
-          <h3>Мои курсы</h3>
-          <div class="course-search">
-              <input type="text" placeholder="Поиск...">
-              <button><i class="fas fa-search"></i></button>
-          </div>
-
-          <ul class="course-list">
-              <li><a href="#">Дискретная математика</a><br><h4>1 Тест до 01.02.2025!</h4></li>
-              <li><a href="#">Теория вероятностей и математическая статистика</a><br><h4>2 Теста до 06.02.2025!</h4></li>
-          </ul>
-      </div>
-  </div>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-  <script src="../static/js/profile.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-  </body>
+        <script src="../static/js/profile.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    </body>
 </html>
