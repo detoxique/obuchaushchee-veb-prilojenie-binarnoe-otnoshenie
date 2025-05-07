@@ -1,0 +1,142 @@
+.container-fluid a{
+    font-size: 20px;
+    white-space: nowrap;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+}
+
+.nav-item a{
+    font-weight: 400;
+    font-size: 18px;
+}
+
+.round {
+    border-radius: 20px; /* Радиус скругления */
+}
+
+.round-big {
+    border-radius: 230px; /* Радиус скругления */
+    box-shadow: 0 0 7px #666;
+}
+
+.round:hover{
+    cursor: pointer;
+}
+
+.user-card {
+    margin-top: 48px;
+    display: flex;
+}
+
+.user-info{
+    
+    position: relative;
+    top: 216px;
+    left: -200px;
+}
+
+.container-md h2{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin-top: 24px;
+}
+
+.actual-tests{
+    width: 100%;
+    height: 346px;
+    background-color: #fff;
+    border-radius: 8px;
+    border: 1px solid #bbbbbb;
+}
+
+.actual-tests h2{
+    margin-left: 20px;
+    font-size: 24px;
+}
+
+.actual-tests hr {
+    border: 1px solid #777;
+    width: 96%;
+    height: 1px;
+    margin-left: 2%;
+}
+
+.container-md h3{
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #777;
+}
+
+.course-list {
+    list-style: none;
+    padding: 0;
+    margin-left: 48px;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+}
+
+.course-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.course-list a{
+    color: #000000;
+    text-decoration: underline;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1em;
+}
+
+.course-list h4 {
+    color: #3b3b3b;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    font-size: 1em;
+}
+
+.course-list li:last-child {
+    border-bottom: none;
+}
+
+.last-courses {
+    margin-left: 286px;
+}
+
+.last-courses h2{
+    margin-left: 20px;
+    font-size: 24px;
+}
+
+.cards {
+    
+    display: flex;
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+.card-2 {
+    margin-left: 24px;
+}
+
+::-webkit-scrollbar {
+    height: 10px;
+  }
+  
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f100; 
+  }
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #cacaca; 
+    border-radius: 10px;
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #808080; 
+  }
