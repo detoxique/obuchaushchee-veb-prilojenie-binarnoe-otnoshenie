@@ -1,12 +1,20 @@
 :root {
-    --focus_color: #6D9B50
+    --focus_color: #000
 }
 
-html,
-h1,
-h3,
-h4,
-h5 {
+.container-fluid a{
+    font-size: 20px;
+    white-space: nowrap;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+}
+
+.nav-item a{
+    font-weight: 400;
+    font-size: 18px;
+}
+
+html{
     color: #ffffff;
     font-family: "Inter", sans-serif;
     font-weight: 600;
@@ -27,42 +35,21 @@ h2 {
 }
 
 /*
-    HEADER
-*/
-
-header{
-    background: #6D9B50;
-    height: 64px;
-}
-header h1{
-    margin-top: 12px;
-    font-size: 32px;
-}
-header h1 a{
-    color: #ffffff;
-    margin-top: 6px;
-}
-header h1 a:hover{
-    color: #ffffff;
-    margin-top: 6px;
-}
-
-/*
     FORM
 */
 
-body {
+.form {
+    margin-left: auto;
+    margin-right: auto;
+
     display: grid;
     align-items: center;
     justify-items: center;
     font-family: "Inter", sans-serif;
     font-weight: 400;
-}
 
-.form {
     margin-top: 188px;
     width: 360px;
-    display: grid;
     padding: 32px;
     padding-bottom: 16px;
     background-color: #ffffff;
