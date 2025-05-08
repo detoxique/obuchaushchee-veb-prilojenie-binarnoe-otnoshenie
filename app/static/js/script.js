@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             localStorage.removeItem('access_token'); // Удаляем недействительный токен
             localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
-        })
+        });
     });
 });
 
@@ -98,6 +98,7 @@ async function handlelogin() {
         // Сохраняем токен в localStorage
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
+        
         window.location.href = '/profile';
     } catch (err) {
         alert('Error: ' + err.message);

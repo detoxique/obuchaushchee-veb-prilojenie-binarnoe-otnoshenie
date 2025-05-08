@@ -25,10 +25,8 @@ type TokenResponse struct {
 }
 
 type ProfilePageData struct {
-	Username              string `json:"Username"`
-	Role                  string `json:"Role"`
-	Group                 string `json:"Group"`
-	PerformancePercentage int    `json:"PerformancePersentage"`
+	Username string `json:"Username"`
+	Group    string `json:"Group"`
 }
 
 // Группа
@@ -161,7 +159,7 @@ func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 // Получение страницы профиля с данными
 func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Получен запрос на получение данных админ панели")
-	// Принимаются только GET запросы
+	// Принимаются только POST запросы
 	if r.Method != "POST" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
@@ -662,18 +660,107 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info(profileData.Role)
-	if profileData.Role == "student" {
-		profileData.Role = "Студент"
-	} else if profileData.Role == "teacher" {
-		profileData.Role = "Преподаватель"
-	} else {
-		profileData.Role = "Админ"
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/profile.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы профиля")
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, profileData)
+}
+
+// Получение страницы профиля с данными
+func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных профиля")
+	// Принимаются только GET запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Получение данных
+
+	slog.Info("Токен валиден. Отправлен запрос на получение данных")
+	// Отправка запроса на другой сервер
+	respData, err := http.Post("http://localhost:1337/api/getteacherprofiledata", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer respData.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if respData.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(respData.Body)
+		w.WriteHeader(respData.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	slog.Info("Получен успешный ответ")
+
+	// Успешный ответ
+	var profileData ProfilePageData
+
+	err = json.NewDecoder(respData.Body).Decode(&profileData)
+	if err != nil {
+		slog.Info("Не удалось считать данные профиля")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
 	}
 
 	// Отправление страницы пользователю
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	tmpl, err := template.ParseFiles("templates/profile.html")
+	tmpl, err := template.ParseFiles("templates/profileteacher.html")
 	if err != nil {
 		slog.Info("Не удалось получить шаблон страницы профиля")
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -780,6 +867,150 @@ func handleVerifyToken(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
+		return
+	}
+	w.Write(body)
+}
+
+func handleVerifyAdmin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyadmin", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка прошла успешно
+	slog.Info("Проверка админа прошла успешно")
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
+}
+
+func handleVerifyTeacher(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyteacher", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка прошла успешно
+	slog.Info("Проверка админа прошла успешно")
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
 		return
 	}
 	w.Write(body)
@@ -937,8 +1168,11 @@ func Run(ctx context.Context) error {
 	// API
 	http.HandleFunc("/api/login", handleLogin)
 	http.HandleFunc("/api/verify", handleVerifyToken)
+	http.HandleFunc("/api/verifyadmin", handleVerifyAdmin)
+	http.HandleFunc("/api/verifyteacher", handleVerifyTeacher)
 	http.HandleFunc("/api/refreshtoken", handleRefreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
+	http.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
 	http.HandleFunc("/api/getadminpaneldata", getAdminPanelData)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
