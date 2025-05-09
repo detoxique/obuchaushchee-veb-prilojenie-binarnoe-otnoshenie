@@ -1,133 +1,30 @@
-:root {
-    --focus_color: #6D9B50
-}
-
-html,
-h1 {
-    color: #ffffff;
-    font-family: "Inter", sans-serif;
-    font-weight: 600;
-
-}
-body {
-    font-family: sans-serif;
-    background-color: #CECECE;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center content horizontally */
-}
-a{
-    text-decoration: none;
-    color: inherit;
-}
-
-h2 {
-    color: #000000;
+.container-fluid a{
+    font-size: 20px;
+    white-space: nowrap;
     font-family: "Inter", sans-serif;
     font-weight: 600;
 }
 
-/*
-    HEADER
-*/
-
-header{
-    background: #6D9B50;
-    height: 64px;
-    color: white;
-    padding: 12px;
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-header h1{
-    margin-top: 12px;
-    font-size: 32px;
-}
-header h1 a{
-    color: #ffffff;
-    margin-top: 6px;
-}
-header h1 a:hover{
-    color: #ffffff;
-    margin-top: 6px;
+.nav-item a{
+    font-weight: 400;
+    font-size: 18px;
 }
 
-.container-info {
-    margin-top: 128px;
-    width: 60%;
-    height: 700px;
-    max-width: 800px;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: center;
+.round {
+    border-radius: 20px; /* Радиус скругления */
 }
 
-.container-info h3 {
+.container-md h2{
     font-family: "Inter", sans-serif;
     font-weight: 600;
+    font-size: 24px;
+    margin-top: 24px;
 }
 
-.courses-section {
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column; /* Ensure column layout */
-    align-items: stretch; /* Stretch items to fit width */
-}
-
-.course-item {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    display: block; /* Ensure full width for each item */
-    text-decoration: none; /* Remove underlines */
-    color: inherit; /* Keep the default text color or specify as needed */
-    
-}
-
-.course-item:last-child {
-    border-bottom: none;
-}
-
-.course-title h4 {
-    color: #6D9B50;
-    text-decoration: underline;
-    font-family: "Inter", sans-serif;
-    font-weight: 500;
-    font-style: italic;
-    font-size: 1em;
-    margin-bottom: 5px;
-}
-
-.course-description {
-    color: #BA5700;
+.container-md h3{
     font-family: "Inter", sans-serif;
     font-weight: 400;
-    font-size: 1em;
+    font-size: 14px;
+    color: #777;
 }
 
-@media (max-width: 600px) {
-    .container {
-        width: 95%;
-        padding: 10px;
-    }
-}
-
-.course-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-
-}

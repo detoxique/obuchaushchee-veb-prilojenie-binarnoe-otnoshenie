@@ -18,7 +18,7 @@
     <body>
         <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container-fluid">
-              <a class="navbar-brand" href="#">Образовательный портал</a>
+              <a class="navbar-brand" href="/">Образовательный портал</a>
               <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
               </button>
@@ -34,7 +34,7 @@
 
               <div class="profile-button">
                 <div class="d-flex" id="navbarSupportedContent" type="button">
-                    <img src="../static/img/profile-teacher40x40.jpg" alt="" class="round" href="#">
+                    <img src="../static/img/profile-teacher40x40.jpg" alt="" class="round" href="/profile" onclick="handleRedirect()">
                 </div>
               </div>
             </div>
@@ -98,11 +98,7 @@
             </div>
         </div>
 
-        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-        
-
-        
-
+        <script src="../static/js/coursesteacher.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     </body>
 </html>

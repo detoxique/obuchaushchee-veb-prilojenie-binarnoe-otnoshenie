@@ -52,6 +52,12 @@ type ProfilePageData struct {
 	Group    string `json:"Group"`
 }
 
+type TeacherCoursesPageData struct {
+}
+
+type CoursesPageData struct {
+}
+
 // Группа
 type Group struct {
 	Id   int    `json:"id"`
@@ -62,6 +68,13 @@ type Group struct {
 type User struct {
 	Id        int    `json:"id"`
 	Username  string `json:"Username"`
+	Role      string `json:"Role"`
+	GroupName string `json:"GroupName"`
+}
+
+type UserData struct {
+	Username  string `json:"Username"`
+	Password  string `json:"Password"`
 	Role      string `json:"Role"`
 	GroupName string `json:"GroupName"`
 }
@@ -465,6 +478,144 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на получение данных профиля")
+	// Принимаются только POST запросы
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Вытаскиваем токен и получаем из него имя пользователя
+	token, err := extractToken(w, r)
+	if err != nil {
+		log.Println("Ошибка при проверке токена. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	}
+
+	username := GetUsernameGromToken(token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role, group string
+	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if role != "teacher" {
+		log.Println("Пользователь не является преподавателем")
+		sendError(w, "Пользователь не является преподавателем ", http.StatusUnauthorized)
+		return
+	}
+
+	log.Println("Роль пользователя " + username + ": " + role)
+
+	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Группа пользователя " + username + ": " + group)
+
+	var data TeacherCoursesPageData
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Ошибка в преобразовании в JSON")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+	log.Println(string(jsonData))
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
+}
+
+func getCoursesData(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на получение данных профиля")
+	// Принимаются только POST запросы
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Вытаскиваем токен и получаем из него имя пользователя
+	token, err := extractToken(w, r)
+	if err != nil {
+		log.Println("Ошибка при проверке токена. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	}
+
+	username := GetUsernameGromToken(token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role, group string
+	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if role != "student" {
+		log.Println("Пользователь не является студентом")
+		sendError(w, "Пользователь не является студентом ", http.StatusUnauthorized)
+		return
+	}
+
+	log.Println("Роль пользователя " + username + ": " + role)
+
+	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Группа пользователя " + username + ": " + group)
+
+	var data CoursesPageData
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Ошибка в преобразовании в JSON")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+	log.Println(string(jsonData))
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
+}
+
 // Получение данных админ панели
 func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Получен запрос на получение данных админ панели")
@@ -608,6 +759,50 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
+
+	var userData UserData
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&userData)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Проверка пользователя в БД
+	var checkuser string
+	err = db.QueryRow("SELECT username FROM users WHERE username = $1", userData.Username).Scan(&checkuser)
+	if err == sql.ErrNoRows {
+		// Пользователя нет в базе, продолжаем
+
+		// Ищем ID группы
+		var id int
+		err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
+		if err != nil {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		}
+
+		hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
+
+		var storedHash string
+		err = db.QueryRow("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id).Scan(&storedHash)
+		if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Успешный ответ
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // Удаление пользователя через админ панель
@@ -694,6 +889,8 @@ func main() {
 	http.HandleFunc("/api/refreshtoken", refreshToken)
 	http.HandleFunc("/api/getprofiledata", getProfileData)
 	http.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
+	http.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
+	http.HandleFunc("/api/getcoursesdata", getCoursesData)
 
 	http.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	http.HandleFunc("/api/admin/adduser", addUser)

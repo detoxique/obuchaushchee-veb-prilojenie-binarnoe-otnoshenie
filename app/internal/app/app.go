@@ -20,6 +20,13 @@ type LoginData struct {
 	Password string `json:"password"`
 }
 
+type UserData struct {
+	Username  string `json:"Username"`
+	Password  string `json:"Password"`
+	Role      string `json:"Role"`
+	GroupName string `json:"GroupName"`
+}
+
 type TokenResponse struct {
 	AccessToken string `json:"Authorization"`
 }
@@ -27,6 +34,12 @@ type TokenResponse struct {
 type ProfilePageData struct {
 	Username string `json:"Username"`
 	Group    string `json:"Group"`
+}
+
+type TeacherCoursesPageData struct {
+}
+
+type CoursesPageData struct {
 }
 
 // Группа
@@ -450,6 +463,178 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, profileData)
 }
 
+func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных курсов преподавателя")
+	// Принимаются только GET запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyteacher", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Получение данных
+
+	slog.Info("Токен валиден. Отправлен запрос на получение данных")
+	// Отправка запроса на другой сервер
+	respData, err := http.Post("http://localhost:1337/api/getteachercoursesdata", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer respData.Body.Close()
+
+	slog.Info("Получен успешный ответ")
+
+	// Успешный ответ
+	var coursesData TeacherCoursesPageData
+
+	err = json.NewDecoder(respData.Body).Decode(&coursesData)
+	if err != nil {
+		slog.Info("Не удалось считать данные профиля")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/coursesteacher.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы профиля " + err.Error())
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, coursesData)
+}
+
+func getCoursesData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных курсов преподавателя")
+	// Принимаются только GET запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Получение данных
+
+	slog.Info("Токен валиден. Отправлен запрос на получение данных")
+	// Отправка запроса на другой сервер
+	respData, err := http.Post("http://localhost:1337/api/getcoursesdata", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer respData.Body.Close()
+
+	slog.Info("Получен успешный ответ")
+
+	// Успешный ответ
+	var coursesData CoursesPageData
+
+	err = json.NewDecoder(respData.Body).Decode(&coursesData)
+	if err != nil {
+		slog.Info("Не удалось считать данные профиля")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/courses.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы профиля " + err.Error())
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, coursesData)
+}
+
 // Авторизация
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -748,12 +933,57 @@ func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 
 // Добавление пользователей
 func handleAddUser(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на добавление пользователя в БД")
 	if r.Method != "POST" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
 
+	var userData UserData
+
+	err := json.NewDecoder(r.Body).Decode(&userData)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(userData)
+	if err != nil {
+		slog.Info("Не удалось создать JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/adduser", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Удаление пользователей
@@ -855,6 +1085,8 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/getprofiledata", getProfileData)
 	http.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
 	http.HandleFunc("/api/getadminpaneldata", getAdminPanelData)
+	http.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
+	http.HandleFunc("/api/getcoursesdata", getCoursesData)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
 	http.HandleFunc("/api/admin/deleteuser", handleDeleteUser)

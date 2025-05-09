@@ -37,22 +37,22 @@ const form = {
     login: document.getElementById('login'),
     password: document.getElementById('password'),
     role: document.getElementById('role'),
+    group: document.getElementById('group'),
     button: document.querySelector('.submit')
 }
-
-form.button.onclick = handleAddUser
 
 async function handleAddUser() {
     const username = form.login.getElementsByTagName('input')[0].value;
     const password = form.password.getElementsByTagName('input')[0].value;
     const role = form.role.getElementsByTagName('select')[0].value;
+    const group = form.group.getElementsByTagName('select')[0].value;
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
 
     try {
         const res = await fetch('/api/admin/adduser', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, username, password, role })
+            body: JSON.stringify({ username, password, role, group})
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
