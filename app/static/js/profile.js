@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-    const button = document.getElementById('exitButton');
+    const button = document.querySelector('.user-info > button');
     if (button) {
         button.addEventListener('click', function() {
             console.log('handle?');
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/verifyadmin', {
+    fetch('http://localhost:8080/api/getadminpaneldata', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!response.ok) {
             throw new Error('Token invalid or expired');
         }
-        return response.json();
+        return response.text();
     })
     .then(data => {
         // Успешная проверка токена
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
         // Ошибка проверки токена
-        fetch('http://localhost:8080/api/verifyteacher', {
+        fetch('http://localhost:8080/api/getteacherprofiledata', {
             method: 'POST',
             headers: {
                 'Authorization': token, // Передаем токен в заголовке
@@ -51,31 +51,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) {
                 throw new Error('Token invalid or expired');
             }
-            return response.json();
+            return response.text();
         })
         .then(data => {
             // Успешная проверка токена
-            fetch('http://localhost:8080/api/getteacherprofiledata', {
-                method: 'POST',
-                headers: {
-                    'Authorization': token, // Передаем токен в заголовке
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Token invalid or expired');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Успешная проверка токена
-                document.body.innerHTML = data;
-            })
-            .catch(error => {
-                // Ошибка проверки токена
-                console.log(error);
-            });
+            document.body.innerHTML = data;
         })
         .catch(error => {
             // Ошибка проверки токена
@@ -102,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log(error);
                 localStorage.removeItem('access_token'); // Удаляем недействительный токен
                 localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
+                window.location.href = '/';
             });
         });
     });
@@ -113,4 +94,10 @@ profileButton.onclick = handleRedirect;
 
 function handleRedirect() {
     window.location.href = 'http://localhost:8080/profile';
+}
+
+function logout() {
+    localStorage.removeItem('access_token'); // Удаляем токен
+            localStorage.removeItem('refresh_token'); // Удаляем токен
+            window.location.href = 'http://localhost:8080/';
 }

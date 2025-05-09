@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
-	"text/template"
 )
 
 // Данные для входа
@@ -50,10 +50,9 @@ type AdminPanelData struct {
 }
 
 type ServeAdminPanelData struct {
-	GroupsForSelector  string
-	GroupsHTML         string
-	GroupsHTMLSelector string
-	UsersHTML          string
+	GroupsForSelector string
+	GroupsTableHTML   string
+	UsersHTML         string
 }
 
 type Statistics struct {
@@ -231,7 +230,6 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 
 	// Успешный ответ
 	var adminData AdminPanelData
-	var adminHTML ServeAdminPanelData
 
 	err = json.NewDecoder(resp.Body).Decode(&adminData)
 	if err != nil {
@@ -256,315 +254,8 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		СамаяПопулярнаяСтраница: mostPopular,
 	}
 
-	// Создание HTML кода для вставки
-	page := `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-
-        .container {
-            width: 80%;
-            margin: 20px auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        nav {
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-
-        nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            justify-content: space-around;
-        }
-
-        nav a {
-            color: #fff;
-            text-decoration: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-
-        nav a:hover {
-            background-color: #555;
-        }
-
-        .form-section, .groups-add-section, .groups-section, .users-section, .backup-section, .stats-section {
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-
-        .form-section h2, .groups-add-section h2, .groups-section h2, .users-section h2, .backup-section h2, .stats-section h2 {
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input[type="login"], input[type="password"], input[type="groupname"], select[type="role"], select[type="group"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #3e8e41;
-        }
-
-        .groups-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .groups-list li {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .groups-list li:last-child {
-            border-bottom: none;
-        }
-
-        .user-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .user-list li {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .user-list li:last-child {
-            border-bottom: none;
-        }
-
-        .delete-button {
-            background-color: #f44336;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .delete-button:hover {
-            background-color: #d32f2f;
-        }
-
-        .stats-section ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .stats-section li {
-            padding: 5px 0;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            .container {
-                width: 95%;
-            }
-
-            nav ul {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            nav li {
-                margin-bottom: 5px;
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h1>Админ панель</h1>
-
-        <nav>
-            <ul>
-                <li><a href="#add-user">Добавить пользователя</a></li>
-                <li><a href="#users">Управление учетными записями</a></li>
-                <li><a href="#backup">Резервное копирование</a></li>
-                <li><a href="#stats">Статистика</a></li>
-            </ul>
-        </nav>
-
-        <div id="add-user" class="form-section">
-            <h2>Добавить пользователя</h2>
-            <form>
-                <label for="username">Логин:</label>
-                <input type="login" id="username" name="username" required>
-
-                <label for="password">Пароль:</label>
-                <input type="password" id="password" name="password" required>
-
-                <label for="role">Роль:</label>
-                <select type="role"> 
-                  <option value="Студент">Студент</option>
-                  <option value="Преподаватель">Преподаватель</option>
-                  <option value="Админ">Админ</option>
-                </select>
-
-                <label for="group">Группа:</label>
-                <select type="group">`
-
-	// Добавление в выпадающий список при создании учетной записи
-	groups := adminData.Groups
-	users := adminData.Users
-
-	for i := 0; i < len(groups); i++ {
-		adminHTML.GroupsForSelector += `<option value="` + groups[i].Name + `">` + groups[i].Name + "</option>"
-		adminHTML.GroupsHTML += "<li><span>" + groups[i].Name + `</span><button class="delete-button">Удалить</button></li>` + "\n"
-	}
-
-	page += adminHTML.GroupsForSelector
-
-	var usersSection string
-	for i := 0; i < len(users); i++ {
-		usersSection += "<li><span>" + users[i].Username + "</span>"
-		if users[i].Role == "admin" {
-			usersSection += `<select><option value="Админ">Админ</option>
-			<option value="Преподаватель">Преподаватель</option>
-			<option value="Студент">Студент</option>
-		  </select>`
-		} else if users[i].Role == "student" {
-			usersSection += `<select><option value="Студент">Студент</option>
-                      <option value="Преподаватель">Преподаватель</option>
-                      <option value="Админ">Админ</option>
-                    </select>`
-		} else {
-			usersSection += `<select><option value="Преподаватель">Преподаватель</option>
-                      <option value="Студент">Студент</option>
-                      <option value="Админ">Админ</option>
-                    </select>`
-		}
-
-		grps := `<select>
-                      <option value="` + users[i].GroupName + `">` + users[i].GroupName + `</option>`
-		for j := 0; j < len(groups); j++ {
-			if groups[j].Name != users[i].GroupName {
-				grps += `<option value="` + groups[j].Name + `">` + groups[j].Name + `</option>`
-			}
-		}
-		grps += "</select>"
-
-		usersSection += grps
-		usersSection += `<button class="delete-button">Удалить</button>
-                </li>`
-	}
-
-	page += `</select>
-
-                <button type="submit">Добавить пользователя</button>
-            </form>
-        </div>
-
-        <div id="add-group" class="groups-add-section">
-            <h2>Добавить группу</h2>
-            <form>
-                <label for="groupname">Название группы:</label>
-                <input type="groupname" id="groupname" name="groupname" required>
-                <button type="addgroup">Добавить группу</button>
-            </form>
-        </div>
-
-        <div id="groups" class="groups-section">
-            <h2>Управление группами</h2>
-            <ul class="groups-list">
-                `
-	page += adminHTML.GroupsHTML
-	page += `
-            </ul>
-        </div>
-
-        <div id="users" class="users-section">
-            <h2>Управление учетными записями</h2>
-            <ul class="user-list">`
-
-	// users section
-
-	page += usersSection
-
-	page += `</ul>
-        </div>
-
-        <div id="backup" class="backup-section">
-            <h2>Резервное копирование</h2>
-            <p>Нажмите на кнопку, чтобы получить архив с резервной копией системы.</p>
-            <button>Создать резервную копию</button>
-        </div>
-
-        <div id="stats" class="stats-section">
-            <h2>Статистика сайта</h2>
-            <ul>
-                <li>Всего посещений: {{.ВсегоПосещений}}</li>
-                <li>Самая популярная страница: {{.СамаяПопулярнаяСтраница}}</li>
-            </ul>
-        </div>
-    </div>
-    <script src="../static/js/admin.js"></script>
-</body>
-</html>`
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	tmpl, err := template.New("admin").Parse(page)
+	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
 		slog.Info("Не удалось получить шаблон страницы профиля")
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -735,17 +426,6 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer respData.Body.Close()
 
-	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
-	if respData.StatusCode != http.StatusOK {
-		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера авторизации")
-		body, _ := io.ReadAll(respData.Body)
-		w.WriteHeader(respData.StatusCode)
-		w.Write(body)
-		return
-	}
-
 	slog.Info("Получен успешный ответ")
 
 	// Успешный ответ
@@ -762,7 +442,7 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl, err := template.ParseFiles("templates/profileteacher.html")
 	if err != nil {
-		slog.Info("Не удалось получить шаблон страницы профиля")
+		slog.Info("Не удалось получить шаблон страницы профиля " + err.Error())
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
@@ -945,6 +625,7 @@ func handleVerifyAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleVerifyTeacher(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на подтверждение входа препода")
 	if r.Method != "POST" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
@@ -994,7 +675,7 @@ func handleVerifyTeacher(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Проверка прошла успешно
-	slog.Info("Проверка админа прошла успешно")
+	slog.Info("Проверка препода прошла успешно")
 
 	// Чтение ответа от другого сервера
 	w.Header().Set("Content-Type", "application/json")

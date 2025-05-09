@@ -425,6 +425,12 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if role != "teacher" {
+		log.Println("Пользователь не является преподавателем")
+		sendError(w, "Пользователь не является преподавателем ", http.StatusUnauthorized)
+		return
+	}
+
 	log.Println("Роль пользователя " + username + ": " + role)
 
 	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)

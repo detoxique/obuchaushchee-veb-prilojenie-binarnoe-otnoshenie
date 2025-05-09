@@ -29,10 +29,14 @@
 }
 
 .user-info{
-    
+    max-width: 200px;
     position: relative;
     top: 216px;
     left: -200px;
+}
+
+button[type="exitbutton"]{
+    width: 100%;
 }
 
 .container-md h2{

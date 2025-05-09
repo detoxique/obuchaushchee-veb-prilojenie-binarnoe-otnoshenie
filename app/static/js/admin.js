@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/verify', {
+    fetch('http://localhost:8080/api/getadminpaneldata', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -18,39 +18,18 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(response => {
         if (!response.ok) {
-            window.location.href = '/';
             throw new Error('Token invalid or expired');
         }
-        return response.json();
+        return response.text();
     })
     .then(data => {
-        // Успешная проверка токена
-        fetch('http://localhost:8080/api/getadminpaneldata', {
-            method: 'POST',
-            headers: {
-                'Authorization': token, // Передаем токен в заголовке
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Token invalid or expired');
-            }
-            return response.text();
-        })
-        .then(data => {
-            // Страница получена успешно
-            console.log(data)
-            document.body.innerHTML = data
-        })
-        .catch(error => {
-            // Ошибка проверки токена
-            document.body.innerHTML = "<h2>Нет доступа<h2>"
-        });
+        // Страница получена успешно
+        console.log(data)
+        document.body.innerHTML = data
     })
     .catch(error => {
         // Ошибка проверки токена
-        window.location.href = '/';
+        document.body.innerHTML = "<h2>Нет доступа<h2>"
     });
 });
 

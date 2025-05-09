@@ -14,27 +14,6 @@
     border-radius: 20px; /* Радиус скругления */
 }
 
-.round-big {
-    border-radius: 230px; /* Радиус скругления */
-    box-shadow: 0 0 7px #666;
-}
-
-.round:hover{
-    cursor: pointer;
-}
-
-.user-card {
-    margin-top: 48px;
-    display: flex;
-}
-
-.user-info{
-    
-    position: relative;
-    top: 216px;
-    left: -200px;
-}
-
 .container-md h2{
     font-family: "Inter", sans-serif;
     font-weight: 600;
@@ -101,3 +80,61 @@ thead {
     z-index: 1;
 }
 
+.course-add {
+    margin-top: 3rem;
+    background-color: #fff;
+    border-radius: 8px;
+    border: 1px solid #bbbbbb;
+}
+
+.course-add h2 {
+    margin-left: 24px;
+}
+
+label {
+    margin-left: 24px;
+    display: block;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+textarea {
+    position: relative;
+    left: 24px;
+    display: block;
+    width: 50%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+input[type="name"], input[type="desc"] {
+    margin-left: 24px;
+    display: block;
+    width: 50%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+select[type="group"] {
+    margin-left: 24px;
+    display: block;
+    width: 50%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button[type="mybutton"] {
+    display: block;
+    margin-left: 24px;
+    margin-top: 5px;
+    margin-bottom: 24px;
+}

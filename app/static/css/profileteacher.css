@@ -29,10 +29,14 @@
 }
 
 .user-info{
-    
+    max-width: 200px;
     position: relative;
     top: 216px;
     left: -200px;
+}
+
+button[type="exitbutton"]{
+    width: 100%;
 }
 
 .container-md h2{
@@ -43,7 +47,10 @@
 }
 
 .actual-tests{
-    width: 100%;
+    position: relative;
+    left: 25%;
+    top: -200px;
+    width: 75%;
     height: 346px;
     background-color: #fff;
     border-radius: 8px;
@@ -102,7 +109,8 @@
 }
 
 .last-courses {
-    margin-left: 286px;
+    margin-left: 25%;
+    margin-top: -200px;
 }
 
 .last-courses h2{
