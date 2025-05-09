@@ -30,35 +30,51 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => {
         // Ошибка проверки токена
         document.body.innerHTML = "<h2>Нет доступа<h2>"
+        setTimeout(function() {
+            window.location.href = '/';
+        }, 2000)
     });
 });
 
 const form = {
-    login: document.getElementById('login'),
-    password: document.getElementById('password'),
+    login: document.getElementsByName('username'),
+    password: document.getElementsByName('password'),
     role: document.getElementById('role'),
-    group: document.getElementById('group'),
-    button: document.querySelector('.submit')
+    group: document.getElementById('groupname')
 }
 
-async function handleAddUser() {
-    const username = form.login.getElementsByTagName('input')[0].value;
-    const password = form.password.getElementsByTagName('input')[0].value;
-    const role = form.role.getElementsByTagName('select')[0].value;
-    const group = form.group.getElementsByTagName('select')[0].value;
+function handleAddUser() {
+    const username = form.login[0].value;
+    const password = form.password[0].value;
+    const role = form.role.value;
+    const groupname = form.group.value;
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
 
-    try {
-        const res = await fetch('/api/admin/adduser', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, role, group})
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+    fetch('http://localhost:8080/api/admin/adduser', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password, role, groupname})
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Token invalid or expired');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Страница получена успешно
+        console.log(data);
+    })
+    .catch(error => {
+        // Ошибка проверки токена
+        alert(error);
+    });
+}
 
-        alert('User added successfully!');
-    } catch (err) {
-        alert('Error: ' + err.message);
-    }
+function logout() {
+    localStorage.removeItem('access_token'); // Удаляем токен
+            localStorage.removeItem('refresh_token'); // Удаляем токен
+            window.location.href = 'http://localhost:8080/';
 }

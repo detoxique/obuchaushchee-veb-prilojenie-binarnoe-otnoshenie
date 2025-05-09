@@ -29,7 +29,28 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
         // Ошибка проверки токена
-        
+        fetch('http://localhost:8080/api/getcoursesdata', {
+            method: 'POST',
+            headers: {
+                'Authorization': token, // Передаем токен в заголовке
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Token invalid or expired');
+            }
+            return response.text();
+        })
+        .then(data => {
+            // Страница получена успешно
+            console.log(data)
+            document.body.innerHTML = data
+        })
+        .catch(error => {
+            // Ошибка проверки токена
+            window.location.href = '/';
+        });
     });
 });
 

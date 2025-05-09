@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -40,6 +41,7 @@ type TeacherCoursesPageData struct {
 }
 
 type CoursesPageData struct {
+	Courses []string `json:"Courses"`
 }
 
 // Группа
@@ -81,6 +83,10 @@ type StatsToView struct {
 }
 
 var Stats Statistics
+
+type CoursesPageServeData struct {
+	Courses template.HTML `json:"courses"`
+}
 
 // Страница авторизации
 func serveLoginPage(w http.ResponseWriter, r *http.Request) {
@@ -592,7 +598,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера: " + (string)(resp.StatusCode))
+		slog.Info("Ошибка сервера: " + strconv.Itoa(resp.StatusCode))
 		w.Header().Set("Content-Type", "application/json")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
@@ -618,10 +624,26 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(respData.Body).Decode(&coursesData)
 	if err != nil {
-		slog.Info("Не удалось считать данные профиля")
+		slog.Info("Не удалось считать данные профиля" + err.Error())
 		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
+
+	slog.Info("Количество курсов: " + strconv.Itoa(len(coursesData.Courses)))
+
+	coursesHTML := `<ul class="courses-list">`
+
+	for i := 0; i < len(coursesData.Courses); i++ {
+		coursesHTML += `<li><a href="#">` + coursesData.Courses[i] + `</a><br><h4>1 Тест до 01.02.2025!</h4></li>`
+	}
+
+	coursesHTML += `</ul>`
+
+	var data CoursesPageServeData
+
+	data.Courses = template.HTML(coursesHTML)
+
+	slog.Info(coursesHTML)
 
 	// Отправление страницы пользователю
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -632,7 +654,10 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.Execute(w, coursesData)
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		slog.Info(err.Error())
+	}
 }
 
 // Авторизация
@@ -958,7 +983,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1337/api/adduser", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://localhost:1337/api/admin/adduser", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
@@ -970,7 +995,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера авторизации")
+		slog.Info("Ошибка сервера")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)

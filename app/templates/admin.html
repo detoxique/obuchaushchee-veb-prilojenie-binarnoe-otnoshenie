@@ -45,34 +45,32 @@
         <h1>Админ панель</h1>
         <div id="add-user" class="form-section">
             <h2>Добавить пользователя</h2>
-            <form>
                 <label for="username">Логин:</label>
-                <input type="login" id="username" name="username" required>
+                <input type="login" id="login" name="username">
 
                 <label for="password">Пароль:</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password">
 
                 <label for="role">Роль:</label>
-                <select type="role"> 
-                  <option value="Студент">Студент</option>
-                  <option value="Преподаватель">Преподаватель</option>
-                  <option value="Админ">Админ</option>
+                <select type="role" id="role"> 
+                  <option value="Студент">student</option>
+                  <option value="Преподаватель">teacher</option>
+                  <option value="Админ">admin</option>
                 </select>
                     
                 <label for="group">Группа:</label>
-                <select type="group"> 
+                <select type="groupname" id="groupname"> 
                     <option value="ДИНРб_11/1">ДИНРб_11/1</option>
                 </select>
 
-                <button type="submit" class="btn btn-success" onclick="handleAddUser()">Добавить</button>
-            </form>
+                <button type="submit-btn" class="btn btn-success" onclick="handleAddUser()">Добавить</button>
         </div>
 
         <div id="add-group" class="groups-add-section">
             <h2>Добавить группу</h2>
             <form>
                 <label for="groupname">Название группы:</label>
-                <input type="groupname" id="groupname" name="groupname" required>
+                <input type="groupname-input" id="groupname-input" name="groupname-input" required>
                 <button type="addgroup" class="btn btn-success">Добавить</button>
             </form>
         </div>

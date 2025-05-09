@@ -56,6 +56,7 @@ type TeacherCoursesPageData struct {
 }
 
 type CoursesPageData struct {
+	Courses []string `json:"Courses"`
 }
 
 // Группа
@@ -567,7 +568,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
-	var role, group string
+	var role string
 	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
@@ -587,7 +588,11 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	var data CoursesPageData
+
+	// Получение количества курсов в БД
+	var coursesCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&coursesCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -598,9 +603,28 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Группа пользователя " + username + ": " + group)
+	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
 
-	var data CoursesPageData
+	// Считывание курсов из БД
+	courses := make([]string, coursesCount)
+	for i := 1; i <= coursesCount; i++ {
+		var id int
+		var name string
+		err = db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM courses) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Println(name)
+		courses[i-1] = name
+	}
+
+	data.Courses = courses
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -770,39 +794,39 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println(userData.GroupName)
+
 	// Проверка пользователя в БД
 	var checkuser string
 	err = db.QueryRow("SELECT username FROM users WHERE username = $1", userData.Username).Scan(&checkuser)
-	if err == sql.ErrNoRows {
-		// Пользователя нет в базе, продолжаем
-
-		// Ищем ID группы
-		var id int
-		err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
-		if err != nil {
-			log.Println("Неправильные данные")
-			sendError(w, "Неправильные данные", http.StatusUnauthorized)
-		}
-
-		hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
-
-		var storedHash string
-		err = db.QueryRow("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id).Scan(&storedHash)
-		if err != nil {
-			log.Println("Ошибка базы данных")
-			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Успешный ответ
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		return
-	} else if err != nil {
+	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Пользователя нет в базе, продолжаем
+	log.Println("Проверка прошла успешно, пользователей с таким именем нет")
+	// Ищем ID группы
+	var id int
+	err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
+	if err != nil {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+	}
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
+
+	var storedHash string
+	err = db.QueryRow("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id).Scan(&storedHash)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 // Удаление пользователя через админ панель

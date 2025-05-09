@@ -38,7 +38,7 @@ label {
     font-weight: 500;
 }
 
-input[type="login"], input[type="password"], input[type="groupname"], select[type="role"], select[type="group"] {
+input[type="login"], input[type="password"], input[type="groupname-input"], select[type="role"], select[type="groupname"] {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
