@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="../static/css/admin.css">
 </head>
 <body>
+    <script src="../static/js/admin.js"></script>
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
         <div class="container-fluid">
           <a class="navbar-brand" href="#">Образовательный портал</a>
@@ -52,15 +53,15 @@
                 <input type="password" id="password" name="password">
 
                 <label for="role">Роль:</label>
-                <select type="role" id="role"> 
-                  <option value="Студент">student</option>
-                  <option value="Преподаватель">teacher</option>
-                  <option value="Админ">admin</option>
+                <select name="role" type="role" id="role"> 
+                  <option value="student">Студент</option>
+                  <option value="teacher">Преподаватель</option>
+                  <option value="admin">Админ</option>
                 </select>
                     
                 <label for="group">Группа:</label>
-                <select type="groupname" id="groupname"> 
-                    <option value="ДИНРб_11/1">ДИНРб_11/1</option>
+                <select name="groupname" type="groupname" id="groupname"> 
+                    {{ .Groups }}
                 </select>
 
                 <button type="submit-btn" class="btn btn-success" onclick="handleAddUser()">Добавить</button>
@@ -68,11 +69,9 @@
 
         <div id="add-group" class="groups-add-section">
             <h2>Добавить группу</h2>
-            <form>
-                <label for="groupname">Название группы:</label>
-                <input type="groupname-input" id="groupname-input" name="groupname-input" required>
-                <button type="addgroup" class="btn btn-success">Добавить</button>
-            </form>
+            <label for="groupname-input">Название группы:</label>
+            <input type="groupname-input" id="groupname-input" name="groupname-input">
+            <button type="addgroup" class="btn btn-success" onclick="handleAddGroup()">Добавить</button>
         </div>
 
         <div id="groups" class="groups-section">
@@ -86,21 +85,7 @@
                       </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>ДИНРб_11/1</td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                      </tr>
-                      <tr>
-                        <td>2</td>
-                        <td>ДИНРб_11/2</td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                      </tr>
-                      <tr>
-                        <td>3</td>
-                        <td>ДИНРб_21/1</td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                      </tr>
+                    {{ .GroupsTable }}
                       
                 </tbody>
             </table>
@@ -119,60 +104,7 @@
                       </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>User1</td>
-                        <td>
-                            <select>
-                                <option value="Студент">Студент</option>
-                                <option value="Преподаватель">Преподаватель</option>
-                                <option value="Админ">Админ</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select>
-                                <option value="dinrb11-1">ДИНРб_11/1</option>
-                                <option value="diprb11-1">ДИПРб_11/1</option>
-                                <option value="dinrb21-1">ДИНРб_21/1</option>
-                              </select>
-                        </td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                    </tr>
-                    <tr>
-                        <td>User2</td>
-                        <td>
-                            <select>
-                                <option value="Студент">Студент</option>
-                                <option value="Преподаватель">Преподаватель</option>
-                                <option value="Админ">Админ</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select>
-                                <option value="dinrb11-1">ДИНРб_11/1</option>
-                                <option value="diprb11-1">ДИПРб_11/1</option>
-                                <option value="dinrb21-1">ДИНРб_21/1</option>
-                              </select>
-                        </td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                    </tr>
-                    <tr>
-                        <td>User3</td>
-                        <td>
-                            <select>
-                                <option value="Студент">Студент</option>
-                                <option value="Преподаватель">Преподаватель</option>
-                                <option value="Админ">Админ</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select>
-                                <option value="dinrb11-1">ДИНРб_11/1</option>
-                                <option value="diprb11-1">ДИПРб_11/1</option>
-                                <option value="dinrb21-1">ДИНРб_21/1</option>
-                              </select>
-                        </td>
-                        <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
-                    </tr>
+                    {{.UsersTable}}
                 </tbody>
             </table>
         </div>
@@ -191,6 +123,6 @@
             </ul>
         </div>
     </div>
-    <script src="../static/js/admin.js"></script>
+    
 </body>
 </html>

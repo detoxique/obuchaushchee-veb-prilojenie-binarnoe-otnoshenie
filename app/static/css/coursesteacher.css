@@ -31,7 +31,8 @@
 table {
     margin-top: 24px;
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     max-height: 400px;
     overflow-y: auto;
     background-color: #ffffff;
@@ -47,7 +48,7 @@ th, td {
 }
 
 th {
-    background-color: #5737a0;
+    background-color: #000000;
     color: #ffffff;
     font-weight: 600;
     text-transform: uppercase;
@@ -75,7 +76,7 @@ td:first-child {
 thead {
     position: sticky;
     top: 0;
-    background-color: #5737a0;
+    background-color: #000;
     color: #ffffff;
     z-index: 1;
 }
@@ -137,4 +138,66 @@ button[type="mybutton"] {
     margin-left: 24px;
     margin-top: 5px;
     margin-bottom: 24px;
+}
+
+.file-list {
+    list-style: none;
+    padding: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+}
+
+.file-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.file-list a{
+    color: #000000;
+    text-decoration: underline;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1em;
+}
+
+.file-list h4 {
+    color: #3b3b3b;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    font-size: 1em;
+}
+
+.file-list li:last-child {
+    border-bottom: none;
+}
+
+.tests-list {
+    list-style: none;
+    padding: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+}
+
+.tests-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.tests-list a{
+    color: #000000;
+    text-decoration: underline;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1em;
+}
+
+.tests-list h4 {
+    color: #3b3b3b;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    font-size: 1em;
+}
+
+.tests-list li:last-child {
+    border-bottom: none;
 }

@@ -28,6 +28,14 @@ type LoginData struct {
 	Password string `json:"password"`
 }
 
+type GroupData struct {
+	GroupName string `json:"GroupName"`
+}
+
+type DeleteGroupData struct {
+	Id string `json:"Id"`
+}
+
 // Ответ сервера
 type Response struct {
 	AccessToken  string `json:"access_token"`
@@ -84,6 +92,10 @@ type UserData struct {
 type AdminPanelData struct {
 	Groups []Group `json:"Groups"`
 	Users  []User  `json:"Users"`
+}
+
+type DeleteUserData struct {
+	Name string `json:"Username"`
 }
 
 // Авторизация
@@ -800,24 +812,112 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	var checkuser string
 	err = db.QueryRow("SELECT username FROM users WHERE username = $1", userData.Username).Scan(&checkuser)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			// Пользователя нет в базе, продолжаем
+			log.Println("Проверка прошла успешно, пользователей с таким именем нет")
+			// Ищем ID группы
+			var id int
+			err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
+			if err != nil {
+				log.Println("Неправильные данные")
+				sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			}
+
+			hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
+
+			_, err := db.Exec("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id)
+			if err != nil {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Успешный ответ
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+		}
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Пользователя нет в базе, продолжаем
-	log.Println("Проверка прошла успешно, пользователей с таким именем нет")
-	// Ищем ID группы
-	var id int
-	err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
-	if err != nil {
-		log.Println("Неправильные данные")
-		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+
+}
+
+// Добавление группы через админ панель
+func addGroup(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на добавление группы через админ панель")
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
 	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
+	var groupData GroupData
 
-	var storedHash string
-	err = db.QueryRow("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id).Scan(&storedHash)
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&groupData)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	log.Println(groupData.GroupName)
+
+	// Проверка группы в БД
+	var checkgroup string
+	err = db.QueryRow("SELECT name FROM groups WHERE name = $1", groupData.GroupName).Scan(&checkgroup)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Группы нет в базе, продолжаем
+			_, err = db.Exec("INSERT INTO groups (name) VALUES ($1)", groupData.GroupName)
+			if err != nil {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Успешный ответ
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+
+// Удаление пользователя через админ панель
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var user DeleteUserData
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+	log.Println("Удаляем пользователя " + user.Name)
+	// Проверка пользователя в БД
+	var checkUser string
+	err = db.QueryRow("SELECT username FROM users WHERE username = $1", user.Name).Scan(&checkUser)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var delete string
+	err = db.QueryRow("DELETE FROM users WHERE username = $1", user.Name).Scan(&delete)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -829,13 +929,44 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Удаление пользователя через админ панель
-func deleteUser(w http.ResponseWriter, r *http.Request) {
+// Удаление группы через админ панель
+func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		log.Println("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
+
+	var data DeleteGroupData
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Проверка группы в БД
+	var checkGroup string
+	err = db.QueryRow("SELECT name FROM groups WHERE id = $1", data.Id).Scan(&checkGroup)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Группа есть в базе
+
+	_, err = db.Exec("DELETE FROM groups WHERE id = $1", data.Id)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 // Отправление сообщения об ошибке
@@ -919,6 +1050,8 @@ func main() {
 	http.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	http.HandleFunc("/api/admin/adduser", addUser)
 	http.HandleFunc("/api/admin/deleteuser", deleteUser)
+	http.HandleFunc("/api/admin/addgroup", addGroup)
+	http.HandleFunc("/api/admin/deletegroup", deleteGroup)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)

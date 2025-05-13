@@ -55,14 +55,182 @@
                 <tbody>
                     <tr>
                         <td>Высшая математика</td>
-                        <td><button type="button" class="btn btn-outline-primary btn-sm">Просмотреть</button></td>
-                        <td><button type="button" class="btn btn-outline-primary btn-sm">Просмотреть</button></td>
+                        <td>
+                        <!-- Теория  -->
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#filesModal">
+                          Просмотреть
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="filesModal" tabindex="-1" aria-labelledby="filesModalLabel" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="filesModalLabel">Загруженные файлы</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                
+                                <ul class="file-list">
+                                    <li><a href="#">Файл 1</a><br><h4>Загружено: 01.02.2025</h4></li>
+                                    <li><a href="#">Файл 2</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                    <li><a href="#">Файл 3</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                </ul>
+
+                                <p class="d-inline-flex gap-1">
+                                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                                    Добавить
+                                  </button>
+                                </p>
+                                <div class="collapse" id="collapseExample">
+                                  <div class="card card-body">
+                                    <div class="btn-group" role="group" aria-label="Basic example">
+                                      <button type="button" class="btn btn-primary">Загрузить</button>
+                                      <button type="button" class="btn btn-primary">Выбрать из загруженных</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                <button type="button" class="btn btn-primary">Сохранить</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        </td>
+                        <td>
+                          <!-- Тесты  -->
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#testsModal">
+                          Просмотреть
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="testsModal" tabindex="-1" aria-labelledby="testsModalLabel" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="testsModalLabel">Тесты</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                
+                                <ul class="tests-list">
+                                    <li><a href="#">Тест 1</a><br><h4>Загружено: 01.02.2025</h4></li>
+                                    <li><a href="#">Тест 2</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                    <li><a href="#">Тест 3</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                </ul>
+
+                                <p class="d-inline-flex gap-1">
+                                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                                    Добавить
+                                  </button>
+                                </p>
+                                <div class="collapse" id="collapseExample">
+                                  <div class="card card-body">
+                                    <div class="btn-group" role="group" aria-label="Basic example">
+                                      <button type="button" class="btn btn-primary">Создать</button>
+                                      <button type="button" class="btn btn-primary">Выбрать из готовых</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                <button type="button" class="btn btn-primary">Сохранить</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        </td>
                         <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
                       </tr>
                       <tr>
                         <td>Дискретная математика</td>
-                        <td><button type="button" class="btn btn-outline-primary btn-sm">Просмотреть</button></td>
-                        <td><button type="button" class="btn btn-outline-primary btn-sm">Просмотреть</button></td>
+                        <td>
+                          <!-- Теория  -->
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#filesModal">
+                          Просмотреть
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="filesModal" tabindex="-1" aria-labelledby="filesModalLabel" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="filesModalLabel">Загруженные файлы</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                
+                                <ul class="file-list">
+                                    <li><a href="#">Файл 1</a><br><h4>Загружено: 01.02.2025</h4></li>
+                                    <li><a href="#">Файл 2</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                    <li><a href="#">Файл 3</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                </ul>
+
+                                <p class="d-inline-flex gap-1">
+                                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                                    Добавить
+                                  </button>
+                                </p>
+                                <div class="collapse" id="collapseExample">
+                                  <div class="card card-body">
+                                    <div class="btn-group" role="group" aria-label="Basic example">
+                                      <button type="button" class="btn btn-primary">Загрузить</button>
+                                      <button type="button" class="btn btn-primary">Выбрать из загруженных</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                <button type="button" class="btn btn-primary">Сохранить</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        </td>
+                        <td>
+                            <!-- Тесты  -->
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#testsModal">
+                          Просмотреть
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="testsModal" tabindex="-1" aria-labelledby="testsModalLabel" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="testsModalLabel">Тесты</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                
+                                <ul class="tests-list">
+                                    <li><a href="#">Тест 1</a><br><h4>Загружено: 01.02.2025</h4></li>
+                                    <li><a href="#">Тест 2</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                    <li><a href="#">Тест 3</a><br><h4>Загружено: 06.02.2025</h4></li>
+                                </ul>
+
+                                <p class="d-inline-flex gap-1">
+                                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                                    Добавить
+                                  </button>
+                                </p>
+                                <div class="collapse" id="collapseExample">
+                                  <div class="card card-body">
+                                    <div class="btn-group" role="group" aria-label="Basic example">
+                                      <button type="button" class="btn btn-primary">Создать</button>
+                                      <button type="button" class="btn btn-primary">Выбрать из готовых</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                <button type="button" class="btn btn-primary">Сохранить</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        </td>
                         <td><button type="button" class="btn btn-outline-danger btn-sm">Удалить</button></td>
                       </tr>
                       <tr>
@@ -93,7 +261,7 @@
                 </select>
 
                 <label>Выбранные группы:</label>
-                <button type="mybutton" class="btn btn-primary btn-sm">Добавить</button>
+                <button type="mybutton" class="btn btn-primary">Добавить</button>
               </div>
             </div>
         </div>

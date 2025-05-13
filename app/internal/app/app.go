@@ -28,6 +28,10 @@ type UserData struct {
 	GroupName string `json:"GroupName"`
 }
 
+type GroupData struct {
+	GroupName string `json:"GroupName"`
+}
+
 type TokenResponse struct {
 	AccessToken string `json:"Authorization"`
 }
@@ -65,9 +69,11 @@ type AdminPanelData struct {
 }
 
 type ServeAdminPanelData struct {
-	GroupsForSelector string
-	GroupsTableHTML   string
-	UsersHTML         string
+	Groups                  template.HTML `json:"Groups"`
+	GroupsTable             template.HTML `json:"GroupsTable"`
+	UsersTable              template.HTML `json:"UsersTable"`
+	ВсегоПосещений          int64         `json:"ВсегоПосещений"`
+	СамаяПопулярнаяСтраница string        `json:"СамаяПопулярнаяСтраница"`
 }
 
 type Statistics struct {
@@ -86,6 +92,19 @@ var Stats Statistics
 
 type CoursesPageServeData struct {
 	Courses template.HTML `json:"courses"`
+}
+
+type DeleteGroupData struct {
+	Id string `json:"Id"`
+}
+
+type DeleteUserData struct {
+	Token string `json:"token"`
+	Name  string `json:"Username"`
+}
+
+type DeleteUser struct {
+	Name string `json:"Username"`
 }
 
 // Страница авторизации
@@ -268,20 +287,71 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		mostPopular = "Курсы"
 	}
 
-	stat := StatsToView{
-		ВсегоПосещений:          Stats.ПосещенияАдминПанель + Stats.ПосещенияОценки + Stats.ПосещенияПрофль + Stats.ПосещенияКурсы,
+	// selector HTML
+	var sel string
+	var groupsTable string
+	for i := 0; i < len(adminData.Groups); i++ {
+		sel += `<option value="` + adminData.Groups[i].Name + `">` + adminData.Groups[i].Name + `</option>`
+		if adminData.Groups[i].Name != "admins" && adminData.Groups[i].Name != "teachers" {
+			groupsTable += `<tr><td>` + strconv.Itoa(adminData.Groups[i].Id) + `</td>`
+			groupsTable += `<td>` + adminData.Groups[i].Name + `</td>`
+			groupsTable += `<td><button type="button" id="delete-idgroup-` + strconv.Itoa(adminData.Groups[i].Id) + `" class="btn btn-outline-danger btn-sm">Удалить</button></td></tr>`
+		}
+	}
+
+	// table users HTML
+	var usersTable string
+	for i := 0; i < len(adminData.Users); i++ {
+		usersTable += `<tr><td>` + adminData.Users[i].Username + `</td>`
+		// role selector
+		usersTable += `<td><select><option value="`
+		if adminData.Users[i].Role == "student" {
+			usersTable += `student">Студент</option><option value="teacher">Преподаватель</option>
+                                <option value="admin">Админ</option>`
+		} else if adminData.Users[i].Role == "teacher" {
+			usersTable += `teacher">Преподаватель</option><option value="student">Студент</option>
+                                <option value="admin">Админ</option>`
+		} else {
+			usersTable += `admin">Админ</option><option value="student">Студент</option>
+                                <option value="teacher">Преподаватель</option>`
+		}
+		usersTable += `</select></td>`
+		// group selector
+		usersTable += `<td>
+                            <select>
+                                <option value="` + adminData.Users[i].GroupName + `">` + adminData.Users[i].GroupName + `</option>`
+		for j := 0; j < len(adminData.Groups); j++ {
+			if adminData.Groups[j].Name == adminData.Users[i].GroupName {
+				continue
+			}
+			usersTable += `<option value="` + adminData.Groups[j].Name + `">` + adminData.Groups[j].Name + `</option>`
+		}
+		usersTable += `</select>
+                        </td>`
+		// button
+		usersTable += `<td><button type="button" id="delete-user-` + adminData.Users[i].Username + `" class="btn btn-outline-danger btn-sm">Удалить</button></td></tr>`
+	}
+
+	data := ServeAdminPanelData{
+		Groups:         template.HTML(sel),
+		GroupsTable:    template.HTML(groupsTable),
+		UsersTable:     template.HTML(usersTable),
+		ВсегоПосещений: Stats.ПосещенияАдминПанель + Stats.ПосещенияОценки + Stats.ПосещенияПрофль + Stats.ПосещенияКурсы,
 		СамаяПопулярнаяСтраница: mostPopular,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
-		slog.Info("Не удалось получить шаблон страницы профиля")
+		slog.Info("Не удалось получить шаблон страницы профиля" + err.Error())
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
 
-	tmpl.Execute(w, stat)
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		slog.Info(err.Error())
+	}
 }
 
 // Получение страницы профиля с данными
@@ -557,7 +627,7 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 
 func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Получен запрос на получение данных курсов преподавателя")
-	// Принимаются только GET запросы
+	// Принимаются только POST запросы
 	if r.Method != "POST" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
@@ -655,6 +725,140 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tmpl.Execute(w, data)
+	if err != nil {
+		slog.Info(err.Error())
+	}
+}
+
+func getTeacherMarksData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных успеваемости для преподавателя")
+	// Принимаются только POST запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyteacher", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + strconv.Itoa(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка прошла успешно
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/marksteacher.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы успеваемости " + err.Error())
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		slog.Info(err.Error())
+	}
+}
+
+func getMarksData(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на получение данных успеваемости для студента")
+	// Принимаются только POST запросы
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Проверка токена
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен из запроса")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verify", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера: " + strconv.Itoa(resp.StatusCode))
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка прошла успешно
+	// Отправление страницы пользователю
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl, err := template.ParseFiles("templates/marks.html")
+	if err != nil {
+		slog.Info("Не удалось получить шаблон страницы успеваемости " + err.Error())
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, nil)
 	if err != nil {
 		slog.Info(err.Error())
 	}
@@ -965,9 +1169,17 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	slog.Info(string(dump))
+
 	var userData UserData
 
-	err := json.NewDecoder(r.Body).Decode(&userData)
+	err = json.NewDecoder(r.Body).Decode(&userData)
 	if err != nil {
 		slog.Info("Не удалось считать данные для входа")
 		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
@@ -1018,16 +1230,204 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
+
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	slog.Info(string(dump))
+
+	var userData DeleteUserData
+
+	err = json.NewDecoder(r.Body).Decode(&userData)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	slog.Info("Удаляем пользователя " + userData.Name)
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&userData.Token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyadmin", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Проверка админа прошла успешно
+	// Подготовка запроса к другому серверу
+	var delUser DeleteUser
+	delUser.Name = userData.Name
+	body, err = json.Marshal(&delUser)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err = http.Post("http://localhost:1337/api/admin/deleteuser", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Добавление групп
 func handleAddGroup(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на добавление группы в БД")
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var groupData GroupData
+
+	err := json.NewDecoder(r.Body).Decode(&groupData)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(groupData)
+	if err != nil {
+		slog.Info("Не удалось создать JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/admin/addgroup", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Удаление групп
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на удаление группы из БД")
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var data DeleteGroupData
+
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	slog.Info(data.Id)
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(data)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/admin/deletegroup", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		slog.Info("Не удалось отправить запрос. Ошибка сервера авторизации")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Изменение группы пользователя
@@ -1112,14 +1512,16 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/getadminpaneldata", getAdminPanelData)
 	http.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
 	http.HandleFunc("/api/getcoursesdata", getCoursesData)
+	http.HandleFunc("/api/getteachermarksdata", getTeacherMarksData)
+	http.HandleFunc("/api/getmarksdata", getMarksData)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
 	http.HandleFunc("/api/admin/deleteuser", handleDeleteUser)
-	http.HandleFunc("api/admin/addgroup", handleAddGroup)
-	http.HandleFunc("api/admin/deletegroup", handleDeleteGroup)
+	http.HandleFunc("/api/admin/addgroup", handleAddGroup)
+	http.HandleFunc("/api/admin/deletegroup", handleDeleteGroup)
 
-	http.HandleFunc("api/admin/changeusergroup", handleChangeUserGroup)
-	http.HandleFunc("api/admin/changeuserrole", handleChangeUserRole)
+	http.HandleFunc("/api/admin/changeusergroup", handleChangeUserGroup)
+	http.HandleFunc("/api/admin/changeuserrole", handleChangeUserRole)
 
 	go func() {
 		<-ctx.Done()
