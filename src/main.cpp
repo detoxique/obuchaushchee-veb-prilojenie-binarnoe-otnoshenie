@@ -370,11 +370,11 @@ void getTestsData() {
 
     // POST-запрос с JSON
     httplib::Headers headers = {
+        {"Authorization", localStorage.GetAccessToken()},
         {"Content-Type", "application/json"}
     };
-    std::string body = localStorage.GetAccessToken();
-
-    auto post_res = cli.Post("/api/gettestsdata", headers, body, "application/json");
+    
+    auto post_res = cli.Post("/api/gettestsdata", headers, "", "application/json");
 
     if (post_res && post_res->status == 200) {
 
