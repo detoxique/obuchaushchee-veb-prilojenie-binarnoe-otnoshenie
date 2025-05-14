@@ -98,6 +98,17 @@ type DeleteUserData struct {
 	Name string `json:"Username"`
 }
 
+// Тесты
+type Test struct {
+	Title    string    `json:"Title"`
+	Date     time.Time `json:"Date"`
+	Duration string    `json:"Duration"`
+}
+
+type TestsData struct {
+	Tests []Test `json:"Tests"`
+}
+
 // Авторизация
 func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Обрабатывать только POST запросы
@@ -788,6 +799,85 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(adminData)
 }
 
+func getTestsData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token, err := extractToken(w, r)
+	if err != nil {
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+	}
+
+	// Достаем информацию о тестах из БД
+	username := GetUsernameGromToken(token)
+	var testsCount int
+	err = db.QueryRow(`SELECT DISTINCT COUNT(*)
+						FROM users u
+						JOIN groups g ON u.id_group = g.id
+						JOIN groups_courses gc ON g.id = gc.id_group
+						JOIN courses c ON gc.id_course = c.id
+						JOIN tests t ON c.id = t.id_course
+						WHERE u.username =  = $1`, username).Scan(&testsCount)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tests := make([]Test, testsCount)
+	for i := 1; i <= testsCount; i++ {
+		var title string
+		var date time.Time
+		var duration string
+		err = db.QueryRow(`WITH numbered_rows AS (
+    							SELECT 
+      							    t.name, 
+        							t.upload_date, 
+        							t.duration,
+        							ROW_NUMBER() OVER (ORDER BY t.upload_date DESC) as row_num
+    							FROM users u
+    							JOIN groups g ON u.id_group = g.id
+    							JOIN groups_courses gc ON g.id = gc.id_group
+    							JOIN courses c ON gc.id_course = c.id
+    							JOIN tests t ON c.id = t.id_course
+    							WHERE u.username = $1
+							)
+							SELECT name, upload_date, duration
+							FROM numbered_rows
+							WHERE row_num = $2`, username, i).Scan(&title, &date, &duration)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tests[i-1] = Test{Title: title, Date: date, Duration: duration}
+	}
+
+	testsData := TestsData{Tests: tests}
+
+	jsonData, err := json.Marshal(testsData)
+	if err != nil {
+		log.Println("Ошибка в преобразовании в JSON")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println(string(jsonData))
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(jsonData)
+}
+
 // Добавление пользователя через админ панель
 func addUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -1046,6 +1136,7 @@ func main() {
 	http.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
 	http.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
 	http.HandleFunc("/api/getcoursesdata", getCoursesData)
+	http.HandleFunc("/api/gettestsdata", getTestsData)
 
 	http.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	http.HandleFunc("/api/admin/adduser", addUser)

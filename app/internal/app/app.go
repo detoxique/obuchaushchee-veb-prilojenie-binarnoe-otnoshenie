@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Данные для входа
@@ -105,6 +106,17 @@ type DeleteUserData struct {
 
 type DeleteUser struct {
 	Name string `json:"Username"`
+}
+
+// Тесты
+type Test struct {
+	Title    string    `json:"Title"`
+	Date     time.Time `json:"Date"`
+	Duration string    `json:"Duration"`
+}
+
+type TestsData struct {
+	Tests []Test `json:"Tests"`
 }
 
 // Страница авторизации
@@ -864,6 +876,43 @@ func getMarksData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getTestsData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
+	}
+
+	token := ExtractJWT(string(dump))
+	if token == "" {
+		slog.Info("Не удалось вытащить токен")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/gettestsdata", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+}
+
 // Авторизация
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -1514,6 +1563,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/getcoursesdata", getCoursesData)
 	http.HandleFunc("/api/getteachermarksdata", getTeacherMarksData)
 	http.HandleFunc("/api/getmarksdata", getMarksData)
+	http.HandleFunc("/api/gettestsdata", getTestsData)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
 	http.HandleFunc("/api/admin/deleteuser", handleDeleteUser)

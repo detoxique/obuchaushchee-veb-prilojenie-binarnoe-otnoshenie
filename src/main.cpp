@@ -88,6 +88,7 @@ public:
 void login();
 void exit();
 bool verifyToken(const std::string &str_token);
+std::string removeChar(std::string str, char ch);
 
 tgui::EditBox::Ptr editBoxLogin;
 tgui::EditBox::Ptr editBoxPassword;
@@ -125,21 +126,6 @@ int main()
         label->setPosition({ 25, 25 });
         label->setTextSize(18);
 
-        auto listBox = tgui::ListBox::create();
-        listBox->setSize(300, 200);
-        listBox->setPosition(25, 60);
-
-        // Добавление элементов
-        listBox->addItem(u8"Первый элемент");
-        listBox->addItem(u8"Второй элемент");
-        listBox->addItem(u8"Третий элемент");
-
-        // Получение выбранного элемента
-        listBox->onItemSelect([](const tgui::String& item, const tgui::String& id) {
-            std::cout << "Выбран: " << item.toStdString()
-                << " (ID: " << id.toStdString() << ")" << std::endl;
-            });
-
         tgui::Button::Ptr exitButton = tgui::Button::create(u8"Выйти");
         exitButton->setPosition({ 25, 650 });
         exitButton->setSize({ 60, 25 });
@@ -148,8 +134,27 @@ int main()
             exit();
             });
 
+        auto listView = tgui::ListView::create();
+        listView->setSize(650, 500);
+        listView->setPosition(25, 60);
+
+        // Добавление колонок
+        listView->addColumn(u8"Название", 250);
+        listView->addColumn(u8"Должно быть выполнено до", 200);
+        listView->addColumn(u8"Ограничение времени", 200);
+
+        // Добавление строк
+        listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
+        listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
+        listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+
+        // Настройка выравнивания текста
+        listView->setColumnAlignment(1, tgui::HorizontalAlignment::Center);
+
+
+        gui.add(listView);
+
         gui.add(label);
-        gui.add(listBox);
         gui.add(exitButton);
     }
     else {
@@ -230,21 +235,6 @@ int main()
             label->setPosition({ 25, 25 });
             label->setTextSize(18);
 
-            auto listBox = tgui::ListBox::create();
-            listBox->setSize(300, 200);
-            listBox->setPosition(25, 60);
-
-            // Добавление элементов
-            listBox->addItem(u8"Первый элемент");
-            listBox->addItem(u8"Второй элемент");
-            listBox->addItem(u8"Третий элемент");
-
-            // Получение выбранного элемента
-            listBox->onItemSelect([](const tgui::String& item, const tgui::String& id) {
-                std::cout << "Выбран: " << item.toStdString()
-                    << " (ID: " << id.toStdString() << ")" << std::endl;
-                });
-
             tgui::Button::Ptr exitButton = tgui::Button::create(u8"Выйти");
             exitButton->setPosition({ 25, 650 });
             exitButton->setSize({ 60, 25 });
@@ -253,8 +243,27 @@ int main()
                 exit();
                 });
 
+            auto listView = tgui::ListView::create();
+            listView->setSize(650, 500);
+            listView->setPosition(25, 60);
+
+            // Добавление колонок
+            listView->addColumn(u8"Название", 150);
+            listView->addColumn(u8"Должно быть выполнено до", 200);
+            listView->addColumn(u8"Ограничение времени", 150);
+
+            // Добавление строк
+            listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
+            listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
+            listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+
+            // Настройка выравнивания текста
+            listView->setColumnAlignment(1, tgui::HorizontalAlignment::Center);
+
+
+            gui.add(listView);
+
             gui.add(label);
-            gui.add(listBox);
             gui.add(exitButton);
         }
 
@@ -287,7 +296,36 @@ static bool verifyToken(const std::string& str_token) {
     auto post_res = cli.Post("/api/verify", headers, "", "application/json");
     if (post_res && post_res->status == 200) {
         std::cout << "Token verified" << std::endl;
+        authorized = true;
+        return true;
     }
+    else {
+        headers = {
+            {"Authorization", localStorage.GetRefreshToken()},
+            {"Content-Type", "application/json"}
+        };
+
+        auto post_res_refresh = cli.Post("/api/refreshtoken", headers, "", "application/json");
+        if (post_res_refresh && post_res_refresh->status == 200) {
+            std::string access_token = removeChar(post_res_refresh->body, '"');
+            localStorage.SetTokens(access_token, localStorage.GetRefreshToken());
+            authorized = true;
+            return true;
+        }
+        else {
+            localStorage.Clear();
+            authorized = false;
+            return false;
+        }
+        authorized = false;
+        return false;
+    }
+}
+
+std::string removeChar(std::string str, char ch) {
+    // Используем алгоритм erase-remove для удаления символа
+    str.erase(std::remove(str.begin(), str.end(), ch), str.end());
+    return str;
 }
 
 void login() {
@@ -314,24 +352,7 @@ void login() {
         authorized = true;
     }
     else {
-        headers = {
-            {"Authorization", localStorage.GetRefreshToken()},
-            {"Content-Type", "application/json"}
-        };
-
-        post_res = cli.Post("/api/refreshtoken", headers, "", "application/json");
-        if (post_res && post_res->status == 200) {
-            nlohmann::json j = nlohmann::json::parse(post_res->body);
-
-            std::string access_token = j["access_token"].get<std::string>();
-
-            localStorage.SetTokens(access_token, localStorage.GetRefreshToken());
-            authorized = true;
-        }
-        else {
-            localStorage.Clear();
-            authorized = false;
-        }
+        std::cout << "Invalid credentials" << std::endl;
     }
 }
 
