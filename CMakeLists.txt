@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(MyTGUIApp)
+project(DesktopApp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -31,10 +31,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(httplib)
 
-
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+FetchContent_MakeAvailable(json)
 
 # Создаем исполняемый файл
-add_executable(MyTGUIApp src/main.cpp)
+add_executable(DesktopApp src/main.cpp)
 
 # Link libraries
-target_link_libraries(MyTGUIApp PRIVATE sfml-graphics sfml-window sfml-system tgui httplib)
+target_link_libraries(DesktopApp PRIVATE sfml-graphics sfml-window sfml-system tgui httplib nlohmann_json::nlohmann_json)
