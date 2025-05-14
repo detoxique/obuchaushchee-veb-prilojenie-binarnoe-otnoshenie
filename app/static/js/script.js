@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    form[login].classList.add('filled')
+    form[password].classList.remove('filled')
+
     // Отправляем токен на сервер для проверки
     fetch('http://localhost:8080/api/verify', {
         method: 'POST',
