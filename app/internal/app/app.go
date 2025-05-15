@@ -173,6 +173,16 @@ func serveMarksPage(w http.ResponseWriter, r *http.Request) {
 	UpdateStats()
 }
 
+// Страница авторизации
+func serveNotificationsPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/notifications.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
 // Страница админ панели
 func serveAdminPage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Проверять, авторизован ли пользователь в учетку админа
@@ -1571,6 +1581,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/marks", serveMarksPage)
 	http.HandleFunc("/admin", serveAdminPage)
 	http.HandleFunc("/courses", serveCoursesPage)
+	http.HandleFunc("/notifications", serveNotificationsPage)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

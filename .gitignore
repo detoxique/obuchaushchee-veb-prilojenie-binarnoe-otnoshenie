@@ -25,3 +25,5 @@ go.work.sum
 .env
 mainapp/application
 build
+.pdf
+app/static/pdf

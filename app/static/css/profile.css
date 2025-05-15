@@ -23,6 +23,10 @@
     cursor: pointer;
 }
 
+.show-notifications {
+    margin-right: 24px;
+}
+
 .user-card {
     margin-top: 48px;
     display: flex;
