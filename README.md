@@ -110,4 +110,4 @@
 * _*Backend:*_ Golang
 * _*БД:*_ PostgreSQL, MongoDB
 * _*Аутентификация:*_ JWT
-* _*Desktop:*_ C++, QT
+* _*Desktop:*_ C++, TGUI, httplib, nlohmann/json
