@@ -821,7 +821,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 						JOIN groups_courses gc ON g.id = gc.id_group
 						JOIN courses c ON gc.id_course = c.id
 						JOIN tests t ON c.id = t.id_course
-						WHERE u.username =  = $1`, username).Scan(&testsCount)
+						WHERE u.username = $1`, username).Scan(&testsCount)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)

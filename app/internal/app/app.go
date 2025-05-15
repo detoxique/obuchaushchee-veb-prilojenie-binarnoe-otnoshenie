@@ -911,6 +911,30 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
+	// Чтение ответа от другого сервера
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера")
+		w.Header().Set("Content-Type", "application/json")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	var tests TestsData
+	body, _ = io.ReadAll(resp.Body)
+	err = json.Unmarshal(body, &tests)
+	if err != nil {
+		slog.Info("Не удалось считать данные тестов")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tests)
 }
 
 // Авторизация

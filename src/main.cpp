@@ -8,52 +8,52 @@
 class LocalStorage {
 public:
     bool SetTokens(std::string access_token, std::string refresh_token) {
-        // Открытие файла для записи
+        // РћС‚РєСЂС‹С‚РёРµ С„Р°Р№Р»Р° РґР»СЏ Р·Р°РїРёСЃРё
         std::ofstream out_file("localStorage.txt");
 
-        // Проверка, открыт ли файл
+        // РџСЂРѕРІРµСЂРєР°, РѕС‚РєСЂС‹С‚ Р»Рё С„Р°Р№Р»
         if (!out_file.is_open()) {
-            std::cerr << "Ошибка открытия файла!" << std::endl;
+            std::cerr << "РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ С„Р°Р№Р»Р°!" << std::endl;
             return 1;
         }
 
-        // Запись строки в файл
+        // Р—Р°РїРёСЃСЊ СЃС‚СЂРѕРєРё РІ С„Р°Р№Р»
         out_file << "access_token: " << access_token << std::endl;
         out_file << "refresh_token: " << refresh_token << std::endl;
 
-        // Закрытие файла
+        // Р—Р°РєСЂС‹С‚РёРµ С„Р°Р№Р»Р°
         out_file.close();
 
-        std::cout << "Строка записана в файл." << std::endl;
+        std::cout << "РЎС‚СЂРѕРєР° Р·Р°РїРёСЃР°РЅР° РІ С„Р°Р№Р»." << std::endl;
         return 0;
     }
 
     void Clear() {
-        // Открытие файла для записи
+        // РћС‚РєСЂС‹С‚РёРµ С„Р°Р№Р»Р° РґР»СЏ Р·Р°РїРёСЃРё
         std::ofstream out_file("localStorage.txt");
 
-        // Проверка, открыт ли файл
+        // РџСЂРѕРІРµСЂРєР°, РѕС‚РєСЂС‹С‚ Р»Рё С„Р°Р№Р»
         if (!out_file.is_open()) {
-            std::cerr << "Ошибка открытия файла!" << std::endl;
+            std::cerr << "РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ С„Р°Р№Р»Р°!" << std::endl;
             return;
         }
 
-        // Запись строки в файл
+        // Р—Р°РїРёСЃСЊ СЃС‚СЂРѕРєРё РІ С„Р°Р№Р»
         out_file << "access_token: " << std::endl;
         out_file << "refresh_token: " << std::endl;
 
-        // Закрытие файла
+        // Р—Р°РєСЂС‹С‚РёРµ С„Р°Р№Р»Р°
         out_file.close();
 
-        std::cout << "Строка записана в файл." << std::endl;
+        std::cout << "РЎС‚СЂРѕРєР° Р·Р°РїРёСЃР°РЅР° РІ С„Р°Р№Р»." << std::endl;
     }
 
     std::string GetAccessToken() {
         std::ifstream in("localStorage.txt");
 
-        // Проверка, открыт ли файл
+        // РџСЂРѕРІРµСЂРєР°, РѕС‚РєСЂС‹С‚ Р»Рё С„Р°Р№Р»
         if (!in.is_open()) {
-            std::cerr << "Ошибка открытия файла!" << std::endl;
+            std::cerr << "РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ С„Р°Р№Р»Р°!" << std::endl;
             return "";
         }
 
@@ -61,7 +61,7 @@ public:
         while (std::getline(in, line)) {
             if (line.find("access_token: ") == 0) {
                 in.close();
-                return line.substr(14); // Удаляем "access_token: " (14 символов)
+                return line.substr(14); // РЈРґР°Р»СЏРµРј "access_token: " (14 СЃРёРјРІРѕР»РѕРІ)
             }
         }
     }
@@ -69,9 +69,9 @@ public:
     std::string GetRefreshToken() {
         std::ifstream in("localStorage.txt");
 
-        // Проверка, открыт ли файл
+        // РџСЂРѕРІРµСЂРєР°, РѕС‚РєСЂС‹С‚ Р»Рё С„Р°Р№Р»
         if (!in.is_open()) {
-            std::cerr << "Ошибка открытия файла!" << std::endl;
+            std::cerr << "РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ С„Р°Р№Р»Р°!" << std::endl;
             return "";
         }
 
@@ -79,7 +79,7 @@ public:
         while (std::getline(in, line)) {
             if (line.find("refresh_token: ") == 0) {
                 in.close();
-                return line.substr(15); // Удаляем "access_token: " (14 символов)
+                return line.substr(15); // РЈРґР°Р»СЏРµРј "access_token: " (14 СЃРёРјРІРѕР»РѕРІ)
             }
         }
     }
@@ -87,6 +87,7 @@ public:
 
 void login();
 void exit();
+void getTestsData();
 bool verifyToken(const std::string &str_token);
 std::string removeChar(std::string str, char ch);
 
@@ -96,9 +97,9 @@ tgui::EditBox::Ptr editBoxPassword;
 LocalStorage localStorage;
 
 int CurrentPage = 0;
-// 0 - авторизация
-// 1 - список тестов
-// 2 - тест
+// 0 - Р°РІС‚РѕСЂРёР·Р°С†РёСЏ
+// 1 - СЃРїРёСЃРѕРє С‚РµСЃС‚РѕРІ
+// 2 - С‚РµСЃС‚
 
 bool authorized = 0;
 
@@ -106,7 +107,7 @@ int main()
 {
     setlocale(LC_ALL, "ru");
 
-    sf::RenderWindow window{ {1280, 720}, L"Курсовая работа" };
+    sf::RenderWindow window{ {1280, 720}, L"РљСѓСЂСЃРѕРІР°СЏ СЂР°Р±РѕС‚Р° РљР°СЂРїРµРЅРєРѕ Рњ.Р’." };
     tgui::Gui gui{ window };
 
     try {
@@ -122,11 +123,14 @@ int main()
 
     if (verifyToken(token)) {
         CurrentPage = 1;
-        tgui::Label::Ptr label = tgui::Label::create(u8"Доступные тесты");
+
+        getTestsData();
+
+        tgui::Label::Ptr label = tgui::Label::create(u8"Р”РѕСЃС‚СѓРїРЅС‹Рµ С‚РµСЃС‚С‹");
         label->setPosition({ 25, 25 });
         label->setTextSize(18);
 
-        tgui::Button::Ptr exitButton = tgui::Button::create(u8"Выйти");
+        tgui::Button::Ptr exitButton = tgui::Button::create(u8"Р’С‹Р№С‚Рё");
         exitButton->setPosition({ 25, 650 });
         exitButton->setSize({ 60, 25 });
         exitButton->setTextSize(14);
@@ -135,31 +139,33 @@ int main()
             });
 
         auto listView = tgui::ListView::create();
-        listView->setSize(650, 500);
+        listView->setSize(1230, 500);
         listView->setPosition(25, 60);
 
-        // Добавление колонок
-        listView->addColumn(u8"Название", 250);
-        listView->addColumn(u8"Должно быть выполнено до", 200);
-        listView->addColumn(u8"Ограничение времени", 200);
+        // Р”РѕР±Р°РІР»РµРЅРёРµ РєРѕР»РѕРЅРѕРє
+        listView->addColumn(u8"РќР°Р·РІР°РЅРёРµ", 450);
+        listView->addColumn(u8"Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ РІС‹РїРѕР»РЅРµРЅРѕ РґРѕ", 200);
+        listView->addColumn(u8"РћРіСЂР°РЅРёС‡РµРЅРёРµ РїРѕ РІСЂРµРјРµРЅРё", 200);
 
-        // Добавление строк
-        listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
-        listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
-        listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+        // Р”РѕР±Р°РІР»РµРЅРёРµ СЃС‚СЂРѕРє
+        listView->addItem({ u8"Р’С‹СЃС€Р°СЏ РјР°С‚РµРјР°С‚РёРєР°", "25.03.2025", u8"1 С‡Р°СЃ" });
+        listView->addItem({ u8"Р”РёСЃРєСЂРµС‚РЅР°СЏ РјР°С‚РµРјР°С‚РёРєР°", "31.03.2025", u8"15 РјРёРЅСѓС‚" });
+        listView->addItem({ u8"РўРµРѕСЂРёСЏ РІРµСЂРѕСЏС‚РЅРѕСЃС‚РµР№ Рё РјР°С‚РµРјР°С‚РёС‡РµСЃРєР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°", "28.03.2025", u8"РќРµС‚" });
 
-        // Настройка выравнивания текста
-        listView->setColumnAlignment(1, tgui::HorizontalAlignment::Center);
+        tgui::Button::Ptr startButton = tgui::Button::create(u8"РџРµСЂРµР№С‚Рё Рє РІС‹РїРѕР»РЅРµРЅРёСЋ");
+        startButton->setPosition({ 25, 600 });
+        startButton->setSize({ 180, 25 });
+        startButton->setTextSize(14);
 
-
-        gui.add(listView);
-
+        gui.add(startButton, "startButton");
+        gui.add(listView, "tests");
         gui.add(label);
-        gui.add(exitButton);
+        
+        gui.add(exitButton, "exitButton");
     }
     else {
         // GUI
-        tgui::Label::Ptr label = tgui::Label::create(u8"Авторизация");
+        tgui::Label::Ptr label = tgui::Label::create(u8"РђРІС‚РѕСЂРёР·Р°С†РёСЏ");
         label->setPosition({ 560, 200 });
         label->setTextSize(18);
 
@@ -173,7 +179,7 @@ int main()
         editBoxPassword->setSize({ 160, 20 });
         editBoxPassword->setTextSize(14);
 
-        tgui::Button::Ptr button = tgui::Button::create(u8"Войти");
+        tgui::Button::Ptr button = tgui::Button::create(u8"Р’РѕР№С‚Рё");
         button->setPosition({ 610, 330 });
         button->setSize({ 60, 25 });
         button->setTextSize(14);
@@ -193,6 +199,12 @@ int main()
         {
             gui.handleEvent(event);
 
+            if (event.type == sf::Event::Resized) {
+                gui.get("startButton")->setPosition({ 25, window.getSize().y - 120 });
+                gui.get("exitButton")->setPosition({25, window.getSize().y - 70});
+                gui.get("tests")->setSize({window.getSize().x - 50, window.getSize().y - 220 });
+            }
+
             if (event.type == sf::Event::Closed)
                 window.close();
         }
@@ -200,7 +212,7 @@ int main()
         if (!authorized && CurrentPage != 0) {
             gui.removeAllWidgets();
 
-            tgui::Label::Ptr label = tgui::Label::create(u8"Авторизация");
+            tgui::Label::Ptr label = tgui::Label::create(u8"РђРІС‚РѕСЂРёР·Р°С†РёСЏ");
             label->setPosition({ 560, 200 });
             label->setTextSize(18);
 
@@ -214,7 +226,7 @@ int main()
             editBoxPassword->setSize({ 160, 20 });
             editBoxPassword->setTextSize(14);
 
-            tgui::Button::Ptr button = tgui::Button::create(u8"Войти");
+            tgui::Button::Ptr button = tgui::Button::create(u8"Р’РѕР№С‚Рё");
             button->setPosition({ 610, 330 });
             button->setSize({ 60, 25 });
             button->setTextSize(14);
@@ -229,13 +241,14 @@ int main()
 
         if (authorized && CurrentPage != 1) {
             CurrentPage = 1;
+            getTestsData();
             gui.removeAllWidgets();
 
-            tgui::Label::Ptr label = tgui::Label::create(u8"Доступные тесты");
+            tgui::Label::Ptr label = tgui::Label::create(u8"Р”РѕСЃС‚СѓРїРЅС‹Рµ С‚РµСЃС‚С‹");
             label->setPosition({ 25, 25 });
             label->setTextSize(18);
 
-            tgui::Button::Ptr exitButton = tgui::Button::create(u8"Выйти");
+            tgui::Button::Ptr exitButton = tgui::Button::create(u8"Р’С‹Р№С‚Рё");
             exitButton->setPosition({ 25, 650 });
             exitButton->setSize({ 60, 25 });
             exitButton->setTextSize(14);
@@ -244,27 +257,30 @@ int main()
                 });
 
             auto listView = tgui::ListView::create();
-            listView->setSize(650, 500);
+            listView->setSize(1230, 500);
             listView->setPosition(25, 60);
 
-            // Добавление колонок
-            listView->addColumn(u8"Название", 150);
-            listView->addColumn(u8"Должно быть выполнено до", 200);
-            listView->addColumn(u8"Ограничение времени", 150);
+            // Р”РѕР±Р°РІР»РµРЅРёРµ РєРѕР»РѕРЅРѕРє
+            listView->addColumn(u8"РќР°Р·РІР°РЅРёРµ", 450);
+            listView->addColumn(u8"Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ РІС‹РїРѕР»РЅРµРЅРѕ РґРѕ", 200);
+            listView->addColumn(u8"РћРіСЂР°РЅРёС‡РµРЅРёРµ РїРѕ РІСЂРµРјРµРЅРё", 200);
 
-            // Добавление строк
-            listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
-            listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
-            listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+            // Р”РѕР±Р°РІР»РµРЅРёРµ СЃС‚СЂРѕРє
+            listView->addItem({ u8"Р’С‹СЃС€Р°СЏ РјР°С‚РµРјР°С‚РёРєР°", "25.03.2025", u8"1 С‡Р°СЃ" });
+            listView->addItem({ u8"Р”РёСЃРєСЂРµС‚РЅР°СЏ РјР°С‚РµРјР°С‚РёРєР°", "31.03.2025", u8"15 РјРёРЅСѓС‚" });
+            listView->addItem({ u8"РўРµРѕСЂРёСЏ РІРµСЂРѕСЏС‚РЅРѕСЃС‚РµР№ Рё РјР°С‚РµРјР°С‚РёС‡РµСЃРєР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°", "28.03.2025", u8"РќРµС‚" });
 
-            // Настройка выравнивания текста
-            listView->setColumnAlignment(1, tgui::HorizontalAlignment::Center);
+            tgui::Button::Ptr startButton = tgui::Button::create(u8"РџРµСЂРµР№С‚Рё Рє РІС‹РїРѕР»РЅРµРЅРёСЋ");
+            startButton->setPosition({ 25, 600 });
+            startButton->setSize({ 180, 25 });
+            startButton->setTextSize(14);
 
+            gui.add(startButton, "startButton");
 
-            gui.add(listView);
+            gui.add(listView, "tests");
 
             gui.add(label);
-            gui.add(exitButton);
+            gui.add(exitButton, "exitButton");
         }
 
         window.clear(sf::Color(255, 255, 255, 255));
@@ -287,7 +303,7 @@ static bool verifyToken(const std::string& str_token) {
 
     httplib::Client cli("localhost:8080");
 
-    // POST-запрос с JSON
+    // POST-Р·Р°РїСЂРѕСЃ СЃ JSON
     httplib::Headers headers = {
         {"Authorization", str_token},
         {"Content-Type", "application/json"}
@@ -323,7 +339,6 @@ static bool verifyToken(const std::string& str_token) {
 }
 
 std::string removeChar(std::string str, char ch) {
-    // Используем алгоритм erase-remove для удаления символа
     str.erase(std::remove(str.begin(), str.end(), ch), str.end());
     return str;
 }
@@ -334,7 +349,7 @@ void login() {
     }
     httplib::Client cli("localhost:8080");
 
-    // POST-запрос с JSON
+    // POST-Р·Р°РїСЂРѕСЃ СЃ JSON
     httplib::Headers headers = {
         {"Content-Type", "application/json"}
     };
@@ -342,7 +357,7 @@ void login() {
 
     auto post_res = cli.Post("/api/login", headers, body, "application/json");
     if (post_res && post_res->status == 200) {
-        // Парсим и сохраняем токены
+        // РџР°СЂСЃРёРј Рё СЃРѕС…СЂР°РЅСЏРµРј С‚РѕРєРµРЅС‹
         nlohmann::json j = nlohmann::json::parse(post_res->body);
 
         std::string access_token = j["access_token"].get<std::string>();
@@ -368,7 +383,7 @@ void getTestsData() {
 
     httplib::Client cli("localhost:8080");
 
-    // POST-запрос с JSON
+    // POST-Р·Р°РїСЂРѕСЃ СЃ JSON
     httplib::Headers headers = {
         {"Authorization", localStorage.GetAccessToken()},
         {"Content-Type", "application/json"}
@@ -377,6 +392,9 @@ void getTestsData() {
     auto post_res = cli.Post("/api/gettestsdata", headers, "", "application/json");
 
     if (post_res && post_res->status == 200) {
-
+        std::cout << post_res->body << std::endl;
+    }
+    else {
+        std::cout << "Failed to fetch tests data." << std::endl;
     }
 }
