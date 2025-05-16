@@ -1,4 +1,4 @@
-#include <TGUI/TGUI.hpp>
+﻿#include <TGUI/TGUI.hpp>
 #include <TGUI/Backend/SFML-Graphics.hpp>
 #include <iostream>
 #include <httplib.h>
