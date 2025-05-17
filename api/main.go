@@ -100,9 +100,10 @@ type DeleteUserData struct {
 
 // Тесты
 type Test struct {
-	Title    string    `json:"Title"`
-	Date     time.Time `json:"Date"`
-	Duration string    `json:"Duration"`
+	Title      string    `json:"Title"`
+	UploadDate time.Time `json:"UploadDate"`
+	EndDate    time.Time `json:"EndDate"`
+	Duration   string    `json:"Duration"`
 }
 
 type TestsData struct {
@@ -831,7 +832,8 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	tests := make([]Test, testsCount)
 	for i := 1; i <= testsCount; i++ {
 		var title string
-		var date time.Time
+		var upldate time.Time
+		var enddate time.Time
 		var duration string
 		err = db.QueryRow(`WITH numbered_rows AS (
     							SELECT 
@@ -846,9 +848,9 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
     							JOIN tests t ON c.id = t.id_course
     							WHERE u.username = $1
 							)
-							SELECT name, upload_date, duration
+							SELECT name, upload_date, ends_date, duration
 							FROM numbered_rows
-							WHERE row_num = $2`, username, i).Scan(&title, &date, &duration)
+							WHERE row_num = $2`, username, i).Scan(&title, &upldate, &enddate, &duration)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -858,7 +860,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tests[i-1] = Test{Title: title, Date: date, Duration: duration}
+		tests[i-1] = Test{Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration}
 	}
 
 	testsData := TestsData{Tests: tests}

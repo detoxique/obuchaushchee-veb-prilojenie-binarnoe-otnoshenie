@@ -36,26 +36,30 @@
     color: #777;
 }
 
-.course-list {
+.files {
     background-color: #fff;
     border-radius: 8px;
     border: 1px solid #bbbbbb;
 }
 
-.courses-list {
+.files h2 {
+    margin-left: 24px;
+    font-size: 20px;
+}
+
+.file-list {
     list-style: none;
     padding: 12px 24px;
-    
     font-family: "Inter", sans-serif;
     font-weight: 400;
 }
 
-.course-list li {
+.file-list li {
     padding: 10px;
     border-bottom: 1px solid #eee;
 }
 
-.course-list a{
+.file-list a{
     color: #000000;
     text-decoration: underline;
     font-family: "Inter", sans-serif;
@@ -63,36 +67,25 @@
     font-size: 1em;
 }
 
-.course-list h4 {
+.file-list h4 {
     color: #3b3b3b;
     font-family: "Inter", sans-serif;
     font-weight: 400;
     font-size: 1em;
 }
 
-.course-list li:last-child {
+.file-list li:last-child {
     border-bottom: none;
 }
 
-.course-search {
-    padding: 24px 24px;
-    display: flex;
-    align-items: center;
+.tests {
+    margin-top: 24px;
+    background-color: #fff;
+    border-radius: 8px;
+    border: 1px solid #bbbbbb;
 }
 
-.course-search input {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-right: 5px;
-}
-
-.course-search button {
-    background-color: #ddd;
-    color: #333;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
+.tests h2 {
+    margin-left: 24px;
+    font-size: 20px;
 }

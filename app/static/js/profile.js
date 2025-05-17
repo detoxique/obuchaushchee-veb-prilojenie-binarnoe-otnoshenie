@@ -98,6 +98,10 @@ function handleRedirect() {
 
 function logout() {
     localStorage.removeItem('access_token'); // Удаляем токен
-            localStorage.removeItem('refresh_token'); // Удаляем токен
-            window.location.href = 'http://localhost:8080/';
+    localStorage.removeItem('refresh_token'); // Удаляем токен
+    window.location.href = 'http://localhost:8080/';
+}
+
+function gotonotifications() {
+    window.location.href = '/notifications';
 }

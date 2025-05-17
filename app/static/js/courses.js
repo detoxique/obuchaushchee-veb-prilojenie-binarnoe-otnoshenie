@@ -57,3 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function handleRedirect() {
     window.location.href = 'http://localhost:8080/profile';
 }
+
+function gotonotifications() {
+    window.location.href = '/notifications';
+}

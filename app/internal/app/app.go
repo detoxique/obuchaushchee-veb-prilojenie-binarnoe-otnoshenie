@@ -43,6 +43,18 @@ type ProfilePageData struct {
 }
 
 type TeacherCoursesPageData struct {
+	Courses []string `json:"Courses"`
+}
+
+type Course struct {
+	Name  string `json:"Name"`
+	Files []File `json:"Files"`
+	Tests []Test `json:"Tests"`
+}
+
+type File struct {
+	Name       string    `json:"Name"`
+	UploadDate time.Time `json:"UploadDate"`
 }
 
 type CoursesPageData struct {
@@ -110,9 +122,10 @@ type DeleteUser struct {
 
 // Тесты
 type Test struct {
-	Title    string    `json:"Title"`
-	Date     time.Time `json:"Date"`
-	Duration string    `json:"Duration"`
+	Title      string    `json:"Title"`
+	UploadDate time.Time `json:"UploadDate"`
+	EndDate    time.Time `json:"EndDate"`
+	Duration   string    `json:"Duration"`
 }
 
 type TestsData struct {
@@ -1243,6 +1256,10 @@ func handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+func handleUploadFile(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // Добавление пользователей
 func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Получен запрос на добавление пользователя в БД")
@@ -1599,6 +1616,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/getteachermarksdata", getTeacherMarksData)
 	http.HandleFunc("/api/getmarksdata", getMarksData)
 	http.HandleFunc("/api/gettestsdata", getTestsData)
+	http.HandleFunc("/api/upload", handleUploadFile)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
 	http.HandleFunc("/api/admin/deleteuser", handleDeleteUser)
