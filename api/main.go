@@ -839,6 +839,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
     							SELECT 
       							    t.name, 
         							t.upload_date, 
+									t.ends_date,
         							t.duration,
         							ROW_NUMBER() OVER (ORDER BY t.upload_date DESC) as row_num
     							FROM users u

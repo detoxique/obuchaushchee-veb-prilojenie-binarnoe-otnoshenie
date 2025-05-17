@@ -5,6 +5,126 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#include <comdef.h>
+#include <wbemidl.h>
+#pragma comment(lib, "wbemuuid.lib")
+#elif defined(__linux__) || defined(__APPLE__)
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#endif
+
+bool disable_network_interface() {
+    std::string interface_name;
+#if defined(_WIN32) || defined(_WIN64)
+    interface_name = "Ethernet";  // Имя интерфейса в Windows
+#elif defined(__linux__)
+    interface_name = "eth0";      // Обычное имя в Linux
+#elif defined(__APPLE__)
+    interface_name = "en0";       // Обычное имя в macOS
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+    // Windows: Используем netsh (простой способ)
+    std::string command = "netsh interface set interface \"" + interface_name + "\" admin=disable";
+    int result = system(command.c_str());
+    return (result == 0);
+#elif defined(__linux__)
+    // Linux: Используем ioctl
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("socket");
+        return false;
+    }
+
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, interface_name.c_str(), IFNAMSIZ);
+
+    // Получаем текущие флаги
+    if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+        perror("ioctl (get flags)");
+        close(sock);
+        return false;
+    }
+
+    // Отключаем интерфейс
+    ifr.ifr_flags &= ~IFF_UP;
+    if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
+        perror("ioctl (set flags)");
+        close(sock);
+        return false;
+    }
+
+    close(sock);
+    return true;
+#elif defined(__APPLE__)
+    // macOS: Используем ifconfig (или ioctl, как в Linux)
+    std::string command = "ifconfig " + interface_name + " down";
+    int result = system(command.c_str());
+    return (result == 0);
+#else
+#error "Unsupported platform"
+#endif
+}
+
+bool enable_network_interface() {
+    std::string interface_name;
+#if defined(_WIN32) || defined(_WIN64)
+    interface_name = "Ethernet";  // Имя интерфейса в Windows
+#elif defined(__linux__)
+    interface_name = "eth0";      // Обычное имя в Linux
+#elif defined(__APPLE__)
+    interface_name = "en0";       // Обычное имя в macOS
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+    // Windows: Используем netsh
+    std::string command = "netsh interface set interface \"" + interface_name + "\" admin=enable";
+    int result = system(command.c_str());
+    return (result == 0);
+#elif defined(__linux__)
+    // Linux: Используем ioctl
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("socket");
+        return false;
+    }
+
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, interface_name.c_str(), IFNAMSIZ);
+
+    // Получаем текущие флаги
+    if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+        perror("ioctl (get flags)");
+        close(sock);
+        return false;
+    }
+
+    // Включаем интерфейс
+    ifr.ifr_flags |= IFF_UP;
+    if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
+        perror("ioctl (set flags)");
+        close(sock);
+        return false;
+    }
+
+    close(sock);
+    return true;
+#elif defined(__APPLE__)
+    // macOS: Используем ifconfig
+    std::string command = "ifconfig " + interface_name + " up";
+    int result = system(command.c_str());
+    return (result == 0);
+#else
+#error "Unsupported platform"
+#endif
+}
+
 class LocalStorage {
 public:
     bool SetTokens(std::string access_token, std::string refresh_token) {
