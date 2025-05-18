@@ -210,7 +210,7 @@ struct Test {
     std::string Title;
     std::tm UploadDate;
     std::tm EndDate;
-    std::string Duration;
+    std::string Duration; // В секундах
     int Attempts;
 };
 
@@ -328,7 +328,8 @@ int main()
         // Добавление строк
         if (got_tests_data) {
             for (int i = 0; i < tests_data.Tests.size(); i++) {
-                listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration, std::to_string(tests_data.Tests[i].Attempts) });
+                std::string duration = std::to_string(std::stoi(tests_data.Tests[i].Duration) / 60) + u8" минут";
+                listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), duration, std::to_string(tests_data.Tests[i].Attempts) });
             }
         }
         listView->onItemSelect([&]() {
@@ -477,7 +478,8 @@ int main()
             // Добавление строк
             if (got_tests_data) {
                 for (int i = 0; i < tests_data.Tests.size(); i++) {
-                    listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration, std::to_string(tests_data.Tests[i].Attempts) });
+                    std::string duration = std::to_string(std::stoi(tests_data.Tests[i].Duration) / 60) + u8" минут";
+                    listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), duration, std::to_string(tests_data.Tests[i].Attempts) });
                 }
             }
 
@@ -511,7 +513,8 @@ int main()
             label->setPosition({ 25, 25 });
             label->setTextSize(24);
 
-            tgui::Label::Ptr info = tgui::Label::create(u8"Попыток: " + std::to_string(tests_data.Tests[listViewElement].Attempts) + u8" Ограничение по времени: " + tests_data.Tests[listViewElement].Duration);
+            std::string duration = std::to_string(std::stoi(tests_data.Tests[listViewElement].Duration) / 60) + u8" минут";
+            tgui::Label::Ptr info = tgui::Label::create(u8"Попыток: " + std::to_string(tests_data.Tests[listViewElement].Attempts) + u8" Ограничение по времени: " + duration);
             info->setPosition({ 25, 70 });
             info->setTextSize(14);
 
@@ -678,4 +681,10 @@ void getTestsData() {
 
 void getTestData(int selected_listview_item) {
     int id = tests_data.Tests[selected_listview_item].Id;
+}
+
+void startTest() {
+    CurrentPage = 3;
+    getTestData(listViewElement);
+
 }

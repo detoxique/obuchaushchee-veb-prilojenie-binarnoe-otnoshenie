@@ -1,6 +1,8 @@
 package main
 
 import (
+	"api/models"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -1078,6 +1080,74 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func CreateTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var testrequest models.CreateTestRequest
+
+	err := json.NewDecoder(r.Body).Decode(&testrequest)
+	if err != nil {
+		log.Println("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&testrequest.Token)
+	if err != nil {
+		log.Println("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1310/api/", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		log.Println("Ошибка сервера тестов")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
+}
+
+func GetTest(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func StartAttempt(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func FinishAttempt(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // Отправление сообщения об ошибке
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
@@ -1155,6 +1225,14 @@ func main() {
 	http.HandleFunc("/api/admin/deleteuser", deleteUser)
 	http.HandleFunc("/api/admin/addgroup", addGroup)
 	http.HandleFunc("/api/admin/deletegroup", deleteGroup)
+
+	// API tests-service
+	http.HandleFunc("/api/tests", CreateTest)
+	http.HandleFunc("/api/tests/get", GetTest)
+	http.HandleFunc("/api/tests/startattempt", StartAttempt)
+
+	http.HandleFunc("/api/attempts/answer", SubmitAnswer)
+	http.HandleFunc("/api/attempts/finish", FinishAttempt)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)

@@ -42,6 +42,6 @@ func main() {
 	})
 
 	// Запуск сервера
-	log.Println("Starting server on :1310")
+	log.Println("Запуск сервера. Порт :1310")
 	log.Fatal(http.ListenAndServe(":1310", r))
 }

@@ -845,14 +845,6 @@ func GetTestsData(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func GetTest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-}
-
 // Авторизация
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -1430,6 +1422,106 @@ func HandleChangeUserGroup(w http.ResponseWriter, r *http.Request) {
 
 // Изменение роли пользователя
 func HandleChangeUserRole(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Тесты
+func CreateTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var testrequest models.CreateTestRequest
+
+	err := json.NewDecoder(r.Body).Decode(&testrequest)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&testrequest.Token)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/verifyteacher", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Токен подтвержден
+	body, err = json.Marshal(&testrequest)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err = http.Post("http://localhost:1337/api/tests", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
+}
+
+func GetTest(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func StartAttempt(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func FinishAttempt(w http.ResponseWriter, r *http.Request) {
 
 }
 

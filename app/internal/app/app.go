@@ -65,6 +65,14 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/admin/changeusergroup", handlers.HandleChangeUserGroup)
 	http.HandleFunc("/api/admin/changeuserrole", handlers.HandleChangeUserRole)
 
+	// API tests-service
+	http.HandleFunc("/api/tests", handlers.CreateTest)
+	http.HandleFunc("/api/tests/get", handlers.GetTest)
+	http.HandleFunc("/api/tests/startattempt", handlers.StartAttempt)
+
+	http.HandleFunc("/api/attempts/answer", handlers.SubmitAnswer)
+	http.HandleFunc("/api/attempts/finish", handlers.FinishAttempt)
+
 	go func() {
 		<-ctx.Done()
 		s.Shutdown(ctx)
