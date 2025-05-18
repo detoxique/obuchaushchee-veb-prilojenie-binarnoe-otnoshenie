@@ -4,6 +4,7 @@
 #include <httplib.h>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <vector>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -17,7 +18,7 @@
 #include <sys/socket.h>
 #endif
 
-bool disable_network_interface() {
+std::string getInterfaceName() {
     std::string interface_name;
 #if defined(_WIN32) || defined(_WIN64)
     interface_name = "Ethernet";  // Имя интерфейса в Windows
@@ -26,6 +27,12 @@ bool disable_network_interface() {
 #elif defined(__APPLE__)
     interface_name = "en0";       // Обычное имя в macOS
 #endif
+
+    return interface_name;
+}
+
+bool disable_network_interface() {
+    std::string interface_name = getInterfaceName();
 
 #if defined(_WIN32) || defined(_WIN64)
     // Windows: Используем netsh (простой способ)
@@ -72,14 +79,7 @@ bool disable_network_interface() {
 }
 
 bool enable_network_interface() {
-    std::string interface_name;
-#if defined(_WIN32) || defined(_WIN64)
-    interface_name = "Ethernet";  // Имя интерфейса в Windows
-#elif defined(__linux__)
-    interface_name = "eth0";      // Обычное имя в Linux
-#elif defined(__APPLE__)
-    interface_name = "en0";       // Обычное имя в macOS
-#endif
+    std::string interface_name = getInterfaceName();
 
 #if defined(_WIN32) || defined(_WIN64)
     // Windows: Используем netsh
@@ -205,6 +205,52 @@ public:
     }
 };
 
+struct Test {
+    std::string Title;
+    std::tm UploadDate;
+    std::tm EndDate;
+    std::string Duration;
+};
+
+struct TestsData {
+    std::vector<Test> Tests;
+};
+
+// Функция для парсинга даты из строки
+bool parse_date(const std::string& date_str, std::tm& tm) {
+    std::istringstream ss(date_str);
+    // Формат соответствует тому, как time.Time маршалится в JSON
+    ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+    return !ss.fail();
+}
+
+namespace nlohmann {
+    template <>
+    struct adl_serializer<Test> {
+        static void from_json(const json& j, Test& t) {
+            j.at("Title").get_to(t.Title);
+
+            std::string upload_date_str, end_date_str;
+            j.at("UploadDate").get_to(upload_date_str);
+            j.at("EndDate").get_to(end_date_str);
+
+            if (!parse_date(upload_date_str, t.UploadDate) ||
+                !parse_date(end_date_str, t.EndDate)) {
+                std::cout << "Falied to parse date" << std::endl;
+            }
+
+            j.at("Duration").get_to(t.Duration);
+        }
+    };
+
+    template <>
+    struct adl_serializer<TestsData> {
+        static void from_json(const json& j, TestsData& td) {
+            j.at("Tests").get_to(td.Tests);
+        }
+    };
+}
+
 void login();
 void exit();
 void getTestsData();
@@ -215,17 +261,21 @@ tgui::EditBox::Ptr editBoxLogin;
 tgui::EditBox::Ptr editBoxPassword;
 
 LocalStorage localStorage;
+TestsData tests_data;
 
 int CurrentPage = 0;
 // 0 - авторизация
 // 1 - список тестов
 // 2 - тест
 
-bool authorized = 0;
+bool authorized = 0, got_tests_data = 0;
 
 int main()
 {
-    setlocale(LC_ALL, "ru");
+#if defined(_WIN32) || defined(_WIN64)
+    SetConsoleCP(1251); 
+    SetConsoleOutputCP(1251);
+#endif
 
     sf::RenderWindow window{ {1280, 720}, L"Курсовая работа Карпенко М.В." };
     tgui::Gui gui{ window };
@@ -268,16 +318,37 @@ int main()
         listView->addColumn(u8"Ограничение по времени", 200);
 
         // Добавление строк
-        listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
+        /*listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
         listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
-        listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+        listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });*/
+        if (got_tests_data) {
+            for (int i = 0; i < tests_data.Tests.size(); i++) {
+                listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration });
+            }
+        }
 
         tgui::Button::Ptr startButton = tgui::Button::create(u8"Перейти к выполнению");
         startButton->setPosition({ 25, 600 });
         startButton->setSize({ 180, 25 });
         startButton->setTextSize(14);
 
+        tgui::Button::Ptr disableButton = tgui::Button::create(u8"Выключить сетевой драйвер");
+        disableButton->setPosition({ 500, 600 });
+        disableButton->setSize({ 220, 25 });
+        disableButton->setTextSize(14);
+        disableButton->onClick(disable_network_interface);
+
+        tgui::Button::Ptr enableButton = tgui::Button::create(u8"Включить сетевой драйвер");
+        enableButton->setPosition({ 500, 650 });
+        enableButton->setSize({ 220, 25 });
+        enableButton->setTextSize(14);
+        enableButton->onClick(enable_network_interface);
+
         gui.add(startButton, "startButton");
+
+        gui.add(disableButton);
+        gui.add(enableButton);
+
         gui.add(listView, "tests");
         gui.add(label);
         
@@ -485,6 +556,7 @@ void login() {
         
         localStorage.SetTokens(access_token, refresh_token);
         authorized = true;
+        std::cout << "Авторизован. Статус код 200" << std::endl;
     }
     else {
         std::cout << "Invalid credentials" << std::endl;
@@ -512,7 +584,28 @@ void getTestsData() {
     auto post_res = cli.Post("/api/gettestsdata", headers, "", "application/json");
 
     if (post_res && post_res->status == 200) {
-        std::cout << post_res->body << std::endl;
+        //std::cout << post_res->body << std::endl;
+        try {
+            // Парсинг JSON
+            nlohmann::json j = nlohmann::json::parse(post_res->body);
+            tests_data = j.get<TestsData>();
+
+            // Вывод данных
+            for (const auto& test : tests_data.Tests) {
+                std::cout << "Title: " << test.Title << "\n"
+                    << "Upload Date: " << std::asctime(&test.UploadDate)
+                    << "End Date: " << std::asctime(&test.EndDate)
+                    << "Duration: " << test.Duration << "\n\n";
+            }
+
+            got_tests_data = true;
+        }
+        catch (const nlohmann::json::exception& e) {
+            std::cerr << "JSON error: " << e.what() << std::endl;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
     }
     else {
         std::cout << "Failed to fetch tests data." << std::endl;

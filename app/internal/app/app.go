@@ -918,6 +918,8 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info("Токен: " + token)
+
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(&token)
 	if err != nil {
@@ -929,6 +931,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/gettestsdata", "application/json", bytes.NewBuffer(body))
 	if err != nil {
+		slog.Info("Ошибка получения данных тестов http")
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
 	}
@@ -944,20 +947,28 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		w.Write(body)
 		return
 	}
+	slog.Info("Статус 200")
 
-	var tests TestsData
-	body, _ = io.ReadAll(resp.Body)
-	err = json.Unmarshal(body, &tests)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		slog.Info("Не удалось считать данные тестов")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
+		slog.Info("Ошибка при чтении тела ответа")
 	}
+	slog.Info(string(body))
 
+	// var tests TestsData
+
+	// err = json.NewDecoder(resp.Body).Decode(&tests)
+	// if err != nil {
+	// 	slog.Info("Ошибка при чтении JSON")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	w.Write(body)
+	// 	return
+	// }
 	// Отправляем JSON-ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(tests)
+	w.Write(body)
 }
 
 // Авторизация

@@ -3,11 +3,9 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -815,6 +813,9 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 
 	// Достаем информацию о тестах из БД
 	username := GetUsernameGromToken(token)
+
+	log.Println(username)
+
 	var testsCount int
 	err = db.QueryRow(`SELECT DISTINCT COUNT(*)
 						FROM users u
@@ -866,19 +867,28 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 
 	testsData := TestsData{Tests: tests}
 
-	jsonData, err := json.Marshal(testsData)
-	if err != nil {
-		log.Println("Ошибка в преобразовании в JSON")
-		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
+	// Устанавливаем заголовок Content-Type
+	w.Header().Set("Content-Type", "application/json")
+
+	// Кодируем данные в JSON и отправляем
+	if err := json.NewEncoder(w).Encode(testsData); err != nil {
+		http.Error(w, "Ошибка при формировании JSON", http.StatusInternalServerError)
 	}
 
-	log.Println(string(jsonData))
+	// jsonData, err := json.Marshal(testsData)
+	// if err != nil {
+	// 	log.Println("Ошибка в преобразовании в JSON")
+	// 	sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	// 	return
+	// }
 
-	// Отправляем JSON-ответ
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(jsonData)
+	// log.Println(utf8.RuneCountInString(string(jsonData)))
+	// log.Println(string(jsonData))
+
+	// // Отправляем JSON-ответ
+	// w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(http.StatusOK)
+	// json.NewEncoder(w).Encode(jsonData)
 }
 
 // Добавление пользователя через админ панель
@@ -1071,13 +1081,6 @@ func sendError(w http.ResponseWriter, message string, status int) {
 
 func extractToken(w http.ResponseWriter, r *http.Request) (string, error) {
 	// Вытаскиваем токен из запроса
-	dump, err := httputil.DumpRequest(r, true)
-	if err != nil {
-		//fmt.Printf("Error dumping request: %v\n", err)
-		return "", err
-	}
-	fmt.Printf("Request Dump:\n%s\n", string(dump))
-
 	token, err := extractBodyFromRequest(r)
 	if err != nil {
 		log.Println("Не удалось извлечь токен")
@@ -1091,7 +1094,7 @@ func extractToken(w http.ResponseWriter, r *http.Request) (string, error) {
 	return token, nil
 }
 
-// ExtractBodyFromRequest извлекает тело HTTP-запроса как строку
+// извлекает тело HTTP-запроса как строку
 func extractBodyFromRequest(r *http.Request) (string, error) {
 	// Читаем тело запроса
 	bodyBytes, err := io.ReadAll(r.Body)
