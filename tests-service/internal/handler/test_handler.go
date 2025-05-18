@@ -117,3 +117,30 @@ func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(attempt)
 }
+
+func (h *TestHandler) CreateTest(w http.ResponseWriter, r *http.Request) {
+	// В реальном приложении userID получаем из JWT или сессии
+	userID := 1 // временное значение
+
+	var req models.CreateTestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Валидация (можно использовать github.com/go-playground/validator)
+	// if err := validator.New().Struct(req); err != nil {
+	//     http.Error(w, err.Error(), http.StatusBadRequest)
+	//     return
+	// }
+
+	test, err := h.service.CreateTest(r.Context(), &req, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(test)
+}

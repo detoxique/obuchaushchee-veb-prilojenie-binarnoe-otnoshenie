@@ -182,3 +182,88 @@ func (s *TestService) calculateAttemptScore(ctx context.Context, attemptID int) 
 	// Здесь упрощенный вариант
 	return 0, nil
 }
+
+func (s *TestService) CreateTest(ctx context.Context, req *models.CreateTestRequest, authorID int) (*models.Test, error) {
+	// Валидация (используйте github.com/go-playground/validator)
+	// if err := validator.New().Struct(req); err != nil {
+	//     return nil, err
+	// }
+
+	// Проверка вопросов и ответов
+	for _, q := range req.Questions {
+		if (q.QuestionType == "single_choice" || q.QuestionType == "multiple_choice") && len(q.Options) == 0 {
+			return nil, fmt.Errorf("question type %s requires options", q.QuestionType)
+		}
+
+		// Для single_choice проверяем, что есть ровно один правильный ответ
+		if q.QuestionType == "single_choice" {
+			correctCount := 0
+			for _, opt := range q.Options {
+				if opt.IsCorrect {
+					correctCount++
+				}
+			}
+			if correctCount != 1 {
+				return nil, errors.New("single_choice questions must have exactly one correct option")
+			}
+		}
+	}
+
+	// Создаем тест
+	test := &models.Test{
+		Title:    req.Title,
+		EndDate:  req.EndDate,
+		Duration: req.Duration,
+		Attempts: req.Attempts,
+	}
+
+	// Начинаем транзакцию
+	tx, err := s.repo.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	txRepo := repository.NewTxRepository(tx)
+
+	// Сохраняем тест
+	if err := txRepo.CreateTest(ctx, test); err != nil {
+		return nil, fmt.Errorf("failed to create test: %w", err)
+	}
+
+	// Сохраняем вопросы и варианты ответов
+	for _, qReq := range req.Questions {
+		question := &models.Question{
+			TestID:       test.ID,
+			QuestionText: qReq.QuestionText,
+			QuestionType: qReq.QuestionType,
+			Points:       qReq.Points,
+			Position:     qReq.Position,
+		}
+
+		if err := txRepo.CreateQuestion(ctx, question); err != nil {
+			return nil, fmt.Errorf("failed to create question: %w", err)
+		}
+
+		// Сохраняем варианты ответов (если есть)
+		for _, optReq := range qReq.Options {
+			option := &models.AnswerOption{
+				QuestionID: question.ID,
+				OptionText: optReq.OptionText,
+				IsCorrect:  optReq.IsCorrect,
+				Position:   optReq.Position,
+			}
+
+			if err := txRepo.CreateAnswerOption(ctx, option); err != nil {
+				return nil, fmt.Errorf("failed to create answer option: %w", err)
+			}
+		}
+	}
+
+	// Фиксируем транзакцию
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return test, nil
+}

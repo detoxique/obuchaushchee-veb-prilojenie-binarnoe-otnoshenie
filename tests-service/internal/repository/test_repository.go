@@ -9,21 +9,35 @@ import (
 )
 
 type TestRepository struct {
-	db *sql.DB
+	Db *sql.DB
 }
 
 func NewTestRepository(db *sql.DB) *TestRepository {
-	return &TestRepository{db: db}
+	return &TestRepository{Db: db}
+}
+
+func (r *TestRepository) DB() *sql.DB {
+	return r.Db
+}
+
+// txRepository реализация для работы в транзакции (*sql.Tx)
+type txRepository struct {
+	tx *sql.Tx
+}
+
+// NewTxRepository создает репозиторий для работы в транзакции
+func NewTxRepository(tx *sql.Tx) *txRepository {
+	return &txRepository{tx: tx}
 }
 
 func (r *TestRepository) GetTestByID(ctx context.Context, id int) (*models.Test, error) {
-	query := `SELECT id, title, description, author_id, created_at, time_limit, 
-              max_attempts, is_published, passing_score FROM tests WHERE id = $1`
+	query := `SELECT id, name, upload_date, end_date, duration, 
+              attempts FROM tests WHERE id = $1`
 
 	var test models.Test
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&test.ID, &test.Title, &test.Description, &test.AuthorID, &test.CreatedAt,
-		&test.TimeLimit, &test.MaxAttempts, &test.IsPublished, &test.PassingScore,
+	err := r.Db.QueryRowContext(ctx, query, id).Scan(
+		&test.ID, &test.Title, &test.UploadDate, &test.EndDate,
+		&test.Duration, &test.Attempts,
 	)
 
 	if err != nil {
@@ -40,7 +54,7 @@ func (r *TestRepository) GetTestQuestions(ctx context.Context, testID int) ([]mo
 	query := `SELECT id, test_id, question_text, question_type, points, position 
               FROM questions WHERE test_id = $1 ORDER BY position`
 
-	rows, err := r.db.QueryContext(ctx, query, testID)
+	rows, err := r.Db.QueryContext(ctx, query, testID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +76,7 @@ func (r *TestRepository) GetQuestionOptions(ctx context.Context, questionID int)
 	query := `SELECT id, question_id, option_text, is_correct, position 
               FROM answer_options WHERE question_id = $1 ORDER BY position`
 
-	rows, err := r.db.QueryContext(ctx, query, questionID)
+	rows, err := r.Db.QueryContext(ctx, query, questionID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +98,7 @@ func (r *TestRepository) CreateAttempt(ctx context.Context, attempt *models.Test
 	query := `INSERT INTO test_attempts (user_id, test_id, started_at, status) 
               VALUES ($1, $2, $3, $4) RETURNING id`
 
-	err := r.db.QueryRowContext(ctx, query,
+	err := r.Db.QueryRowContext(ctx, query,
 		attempt.UserID, attempt.TestID, attempt.StartedAt, attempt.Status).Scan(&attempt.ID)
 	return err
 }
@@ -93,7 +107,7 @@ func (r *TestRepository) SaveAnswer(ctx context.Context, answer *models.UserAnsw
 	query := `INSERT INTO user_answers (attempt_id, question_id, answer_data, points_earned)
               VALUES ($1, $2, $3, $4) RETURNING id`
 
-	err := r.db.QueryRowContext(ctx, query,
+	err := r.Db.QueryRowContext(ctx, query,
 		answer.AttemptID, answer.QuestionID, answer.AnswerData, answer.PointsEarned).Scan(&answer.ID)
 	return err
 }
@@ -102,6 +116,78 @@ func (r *TestRepository) CompleteAttempt(ctx context.Context, attemptID int, sco
 	query := `UPDATE test_attempts SET finished_at = NOW(), score = $1, status = 'completed' 
               WHERE id = $2`
 
-	_, err := r.db.ExecContext(ctx, query, score, attemptID)
+	_, err := r.Db.ExecContext(ctx, query, score, attemptID)
+	return err
+}
+
+func (r *TestRepository) CreateTest(ctx context.Context, test *models.Test) error {
+	query := `INSERT INTO tests (title, end_date, duration, 
+              attempts) 
+              VALUES ($1, $2, $3, $4) RETURNING id, upload_date`
+
+	err := r.Db.QueryRowContext(ctx, query,
+		test.Title, test.EndDate, test.Duration,
+		test.Attempts,
+	).Scan(&test.ID, &test.UploadDate)
+
+	return err
+}
+
+func (r *TestRepository) CreateQuestion(ctx context.Context, question *models.Question) error {
+	query := `INSERT INTO questions (test_id, question_text, question_type, points, position)
+              VALUES ($1, $2, $3, $4, $5) RETURNING id`
+
+	err := r.Db.QueryRowContext(ctx, query,
+		question.TestID, question.QuestionText, question.QuestionType,
+		question.Points, question.Position,
+	).Scan(&question.ID)
+
+	return err
+}
+
+func (r *TestRepository) CreateAnswerOption(ctx context.Context, option *models.AnswerOption) error {
+	query := `INSERT INTO answer_options (question_id, option_text, is_correct, position)
+              VALUES ($1, $2, $3, $4) RETURNING id`
+
+	err := r.Db.QueryRowContext(ctx, query,
+		option.QuestionID, option.OptionText, option.IsCorrect, option.Position,
+	).Scan(&option.ID)
+
+	return err
+}
+
+func (r *txRepository) CreateTest(ctx context.Context, test *models.Test) error {
+	query := `INSERT INTO tests (title, end_date, duration, 
+              attempts) 
+              VALUES ($1, $2, $3, $4) RETURNING id, upload_date`
+
+	err := r.tx.QueryRowContext(ctx, query,
+		test.Title, test.EndDate, test.Duration,
+		test.Attempts,
+	).Scan(&test.ID, &test.UploadDate)
+
+	return err
+}
+
+func (r *txRepository) CreateQuestion(ctx context.Context, question *models.Question) error {
+	query := `INSERT INTO questions (test_id, question_text, question_type, points, position)
+              VALUES ($1, $2, $3, $4, $5) RETURNING id`
+
+	err := r.tx.QueryRowContext(ctx, query,
+		question.TestID, question.QuestionText, question.QuestionType,
+		question.Points, question.Position,
+	).Scan(&question.ID)
+
+	return err
+}
+
+func (r *txRepository) CreateAnswerOption(ctx context.Context, option *models.AnswerOption) error {
+	query := `INSERT INTO answer_options (question_id, option_text, is_correct, position)
+              VALUES ($1, $2, $3, $4) RETURNING id`
+
+	err := r.tx.QueryRowContext(ctx, query,
+		option.QuestionID, option.OptionText, option.IsCorrect, option.Position,
+	).Scan(&option.ID)
+
 	return err
 }

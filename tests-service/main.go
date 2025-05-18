@@ -31,6 +31,7 @@ func main() {
 	r.Use(middleware.Logger)
 
 	r.Route("/api/tests", func(r chi.Router) {
+		r.Post("/", testHandler.CreateTest)
 		r.Get("/{id}", testHandler.GetTest)
 		r.Post("/{id}/{iduser}/attempts", testHandler.StartAttempt)
 	})
