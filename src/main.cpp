@@ -206,10 +206,12 @@ public:
 };
 
 struct Test {
+    int Id;
     std::string Title;
     std::tm UploadDate;
     std::tm EndDate;
     std::string Duration;
+    int Attempts;
 };
 
 struct TestsData {
@@ -228,6 +230,7 @@ namespace nlohmann {
     template <>
     struct adl_serializer<Test> {
         static void from_json(const json& j, Test& t) {
+            j.at("Id").get_to(t.Id);
             j.at("Title").get_to(t.Title);
 
             std::string upload_date_str, end_date_str;
@@ -240,6 +243,7 @@ namespace nlohmann {
             }
 
             j.at("Duration").get_to(t.Duration);
+            j.at("Attempts").get_to(t.Attempts);
         }
     };
 
@@ -263,12 +267,14 @@ tgui::EditBox::Ptr editBoxPassword;
 LocalStorage localStorage;
 TestsData tests_data;
 
-int CurrentPage = 0;
+int CurrentPage = 0, RealPage = 0;
 // 0 - авторизация
 // 1 - список тестов
-// 2 - тест
+// 2 - информация о тесте
+// 3 - тест
 
 bool authorized = 0, got_tests_data = 0;
+int listViewElement = -1;
 
 int main()
 {
@@ -293,6 +299,7 @@ int main()
 
     if (verifyToken(token)) {
         CurrentPage = 1;
+        RealPage = 1;
 
         getTestsData();
 
@@ -316,21 +323,28 @@ int main()
         listView->addColumn(u8"Название", 450);
         listView->addColumn(u8"Должно быть выполнено до", 200);
         listView->addColumn(u8"Ограничение по времени", 200);
+        listView->addColumn(u8"Количество попыток", 150);
 
         // Добавление строк
-        /*listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
-        listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
-        listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });*/
         if (got_tests_data) {
             for (int i = 0; i < tests_data.Tests.size(); i++) {
-                listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration });
+                listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration, std::to_string(tests_data.Tests[i].Attempts) });
             }
         }
+        listView->onItemSelect([&]() {
+            std::size_t selectedIndex = listView->getSelectedItemIndex();
+            listViewElement = selectedIndex;
+            });
 
         tgui::Button::Ptr startButton = tgui::Button::create(u8"Перейти к выполнению");
         startButton->setPosition({ 25, 600 });
         startButton->setSize({ 180, 25 });
         startButton->setTextSize(14);
+
+        startButton->onClick([]() {
+            std::cout << listViewElement << std::endl;
+            CurrentPage = 2;
+            });
 
         tgui::Button::Ptr disableButton = tgui::Button::create(u8"Выключить сетевой драйвер");
         disableButton->setPosition({ 500, 600 });
@@ -355,6 +369,8 @@ int main()
         gui.add(exitButton, "exitButton");
     }
     else {
+        CurrentPage = 0;
+        RealPage = 0;
         // GUI
         tgui::Label::Ptr label = tgui::Label::create(u8"Авторизация");
         label->setPosition({ 560, 200 });
@@ -400,7 +416,8 @@ int main()
                 window.close();
         }
 
-        if (!authorized && CurrentPage != 0) {
+        if (CurrentPage == 0 && RealPage != 0) {
+            RealPage = 0;
             gui.removeAllWidgets();
 
             tgui::Label::Ptr label = tgui::Label::create(u8"Авторизация");
@@ -430,8 +447,8 @@ int main()
             CurrentPage = 0;
         }
 
-        if (authorized && CurrentPage != 1) {
-            CurrentPage = 1;
+        if (CurrentPage == 1 && RealPage != 1) {
+            RealPage = 1;
             getTestsData();
             gui.removeAllWidgets();
 
@@ -455,16 +472,28 @@ int main()
             listView->addColumn(u8"Название", 450);
             listView->addColumn(u8"Должно быть выполнено до", 200);
             listView->addColumn(u8"Ограничение по времени", 200);
+            listView->addColumn(u8"Количество попыток", 150);
 
             // Добавление строк
-            listView->addItem({ u8"Высшая математика", "25.03.2025", u8"1 час" });
-            listView->addItem({ u8"Дискретная математика", "31.03.2025", u8"15 минут" });
-            listView->addItem({ u8"Теория вероятностей и математическая статистика", "28.03.2025", u8"Нет" });
+            if (got_tests_data) {
+                for (int i = 0; i < tests_data.Tests.size(); i++) {
+                    listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), tests_data.Tests[i].Duration, std::to_string(tests_data.Tests[i].Attempts) });
+                }
+            }
+
+            listView->onItemSelect([&]() {
+                std::size_t selectedIndex = listView->getSelectedItemIndex();
+                listViewElement = selectedIndex;
+                });
 
             tgui::Button::Ptr startButton = tgui::Button::create(u8"Перейти к выполнению");
             startButton->setPosition({ 25, 600 });
             startButton->setSize({ 180, 25 });
             startButton->setTextSize(14);
+            startButton->onClick([]() {
+                std::cout << listViewElement << std::endl;
+                CurrentPage = 2;
+                });
 
             gui.add(startButton, "startButton");
 
@@ -472,6 +501,37 @@ int main()
 
             gui.add(label);
             gui.add(exitButton, "exitButton");
+        }
+
+        if (CurrentPage == 2 && RealPage != 2) {
+            RealPage = 2;
+
+            gui.removeAllWidgets();
+            tgui::Label::Ptr label = tgui::Label::create(tests_data.Tests[listViewElement].Title);
+            label->setPosition({ 25, 25 });
+            label->setTextSize(24);
+
+            tgui::Label::Ptr info = tgui::Label::create(u8"Попыток: " + std::to_string(tests_data.Tests[listViewElement].Attempts) + u8" Ограничение по времени: " + tests_data.Tests[listViewElement].Duration);
+            info->setPosition({ 25, 70 });
+            info->setTextSize(14);
+
+            tgui::Button::Ptr startButton = tgui::Button::create(u8"Перейти к выполнению");
+            startButton->setPosition({ 25, 100 });
+            startButton->setSize({ 180, 25 });
+            startButton->setTextSize(14);
+
+            tgui::Button::Ptr backButton = tgui::Button::create(u8"Вернуться");
+            backButton->setPosition({ 25, 150 });
+            backButton->setSize({ 100, 25 });
+            backButton->setTextSize(14);
+            backButton->onClick([]() {
+                CurrentPage = 1;
+                });
+
+            gui.add(label);
+            gui.add(info);
+            gui.add(startButton);
+            gui.add(backButton);
         }
 
         window.clear(sf::Color(255, 255, 255, 255));
@@ -556,6 +616,7 @@ void login() {
         
         localStorage.SetTokens(access_token, refresh_token);
         authorized = true;
+        CurrentPage = 1;
         std::cout << "Авторизован. Статус код 200" << std::endl;
     }
     else {
@@ -566,6 +627,7 @@ void login() {
 void exit() {
     localStorage.Clear();
     authorized = false;
+    CurrentPage = 0;
 }
 
 void getTestsData() {
@@ -592,10 +654,12 @@ void getTestsData() {
 
             // Вывод данных
             for (const auto& test : tests_data.Tests) {
-                std::cout << "Title: " << test.Title << "\n"
+                std::cout << "id: " << test.Id << "\n" 
+                    << "Title: " << test.Title << "\n"
                     << "Upload Date: " << std::asctime(&test.UploadDate)
                     << "End Date: " << std::asctime(&test.EndDate)
-                    << "Duration: " << test.Duration << "\n\n";
+                    << "Duration: " << test.Duration << "\n"
+                    << "Attempts: " << test.Attempts << "\n\n";
             }
 
             got_tests_data = true;
@@ -610,4 +674,8 @@ void getTestsData() {
     else {
         std::cout << "Failed to fetch tests data." << std::endl;
     }
+}
+
+void getTestData(int selected_listview_item) {
+    int id = tests_data.Tests[selected_listview_item].Id;
 }

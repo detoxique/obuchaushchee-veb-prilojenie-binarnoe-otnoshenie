@@ -98,10 +98,12 @@ type DeleteUserData struct {
 
 // Тесты
 type Test struct {
+	Id         int       `json:"Id"`
 	Title      string    `json:"Title"`
 	UploadDate time.Time `json:"UploadDate"`
 	EndDate    time.Time `json:"EndDate"`
 	Duration   string    `json:"Duration"`
+	Attempts   int       `json:"Attempts"`
 }
 
 type TestsData struct {
@@ -832,16 +834,20 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 
 	tests := make([]Test, testsCount)
 	for i := 1; i <= testsCount; i++ {
+		var id int
 		var title string
 		var upldate time.Time
 		var enddate time.Time
 		var duration string
+		var attempts int
 		err = db.QueryRow(`WITH numbered_rows AS (
     							SELECT 
+									t.id,
       							    t.name, 
         							t.upload_date, 
 									t.ends_date,
         							t.duration,
+									t.attempts,
         							ROW_NUMBER() OVER (ORDER BY t.upload_date DESC) as row_num
     							FROM users u
     							JOIN groups g ON u.id_group = g.id
@@ -850,9 +856,9 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
     							JOIN tests t ON c.id = t.id_course
     							WHERE u.username = $1
 							)
-							SELECT name, upload_date, ends_date, duration
+							SELECT id, name, upload_date, ends_date, duration, attempts
 							FROM numbered_rows
-							WHERE row_num = $2`, username, i).Scan(&title, &upldate, &enddate, &duration)
+							WHERE row_num = $2`, username, i).Scan(&id, &title, &upldate, &enddate, &duration, &attempts)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -862,7 +868,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tests[i-1] = Test{Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration}
+		tests[i-1] = Test{Id: id, Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration, Attempts: attempts}
 	}
 
 	testsData := TestsData{Tests: tests}

@@ -122,10 +122,12 @@ type DeleteUser struct {
 
 // Тесты
 type Test struct {
+	Id         int       `json:"Id"`
 	Title      string    `json:"Title"`
 	UploadDate time.Time `json:"UploadDate"`
 	EndDate    time.Time `json:"EndDate"`
 	Duration   string    `json:"Duration"`
+	Attempts   int       `json:"Attempts"`
 }
 
 type TestsData struct {
@@ -955,20 +957,18 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info(string(body))
 
-	// var tests TestsData
-
-	// err = json.NewDecoder(resp.Body).Decode(&tests)
-	// if err != nil {
-	// 	slog.Info("Ошибка при чтении JSON")
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	w.Write(body)
-	// 	return
-	// }
 	// Отправляем JSON-ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
+}
+
+func getTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
 }
 
 // Авторизация
@@ -1627,6 +1627,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/api/getteachermarksdata", getTeacherMarksData)
 	http.HandleFunc("/api/getmarksdata", getMarksData)
 	http.HandleFunc("/api/gettestsdata", getTestsData)
+	http.HandleFunc("/api/gettest", getTest)
 	http.HandleFunc("/api/upload", handleUploadFile)
 
 	http.HandleFunc("/api/admin/adduser", handleAddUser)
