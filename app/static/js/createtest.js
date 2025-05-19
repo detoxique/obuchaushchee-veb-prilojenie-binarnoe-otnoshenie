@@ -39,10 +39,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <input type="text" name="questions[${questionCounter}][options][0][text]" placeholder="Текст варианта" required>
                                 <input type="checkbox" name="questions[${questionCounter}][options][0][is_correct]">
                                 <label>Правильный</label>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-option">×</button>
+                                <button type="button" class="btn btn-small btn-outline-danger remove-option">×</button>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-small add-option">Добавить вариант</button>
+                        <button type="button" class="btn btn-secondary btn-small add-option">Добавить вариант</button>
                     </div>
 
                     <!-- Контейнер для сопоставления -->
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <select name="questions[${questionCounter}][right_items][0]" required>
                                     <option value="">Выберите</option>
                                 </select>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-matching">×</button>
+                                <button type="button" class="btn btn-small btn-outline-danger remove-matching">×</button>
                             </div>
                         </div>
                         <div class="form-group">
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="right-options-list"></div>
                         </div>
-                        <button type="button" class="btn btn-small add-matching">Добавить пару</button>
+                        <button type="button" class="btn btn-secondary btn-small add-matching">Добавить пару</button>
                     </div>
 
                     <div class="form-group">
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     : `questions[${questionCounter}][correct_option]`}"
                                value="${optionCount}">
                         <label>${questionType.value === 'multiple_choice' ? 'Правильный' : 'Правильный (только один)'}</label>
-                        <button type="button" class="btn btn-small btn-danger remove-option">×</button>
+                        <button type="button" class="btn btn-small btn-outline-danger remove-option">×</button>
                     `;
                     
                     optionList.appendChild(optionItem);
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         div.className = 'option-item';
                         div.innerHTML = `
                             <span>${option}</span>
-                            <button type="button" class="btn btn-small btn-danger remove-right-option" data-index="${index}">×</button>
+                            <button type="button" class="btn btn-small btn-outline-danger remove-right-option" data-index="${index}">×</button>
                         `;
                         rightOptionsList.appendChild(div);
                     });
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="">Выберите</option>
                             ${rightOptions.map((opt, i) => `<option value="${i}">${opt}</option>`).join('')}
                         </select>
-                        <button type="button" class="btn btn-small btn-danger remove-matching">×</button>
+                        <button type="button" class="btn btn-small btn-outline-danger remove-matching">×</button>
                     `;
                     
                     pairsContainer.appendChild(pairItem);
@@ -221,13 +221,15 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('testForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
                 // Собираем данные формы
                 const formData = {
-                    name: this.elements.name.value,
-                    id_course: this.elements.id_course.value,
-                    ends_date: this.elements.ends_date.value,
+                    course_id: this.elements.id_course.value,
+                    token: token,
+                    title: this.elements.name.value,
                     duration: this.elements.duration.value,
                     attempts: this.elements.attempts.value,
+                    end_date: this.elements.ends_date.value,
                     questions: []
                 };
 
@@ -272,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 // Отправка данных на сервер
-                fetch(this.action, {
+                fetch('http://localhost:8080//api/tests', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

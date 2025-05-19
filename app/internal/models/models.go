@@ -33,10 +33,12 @@ type ProfilePageData struct {
 }
 
 type TeacherCoursesPageData struct {
-	Courses []string `json:"Courses"`
+	Courses []Course `json:"Courses"`
+	Groups  []Group  `json:"Groups"`
 }
 
 type Course struct {
+	Id    int    `json:"id"`
 	Name  string `json:"Name"`
 	Files []File `json:"Files"`
 	Tests []Test `json:"Tests"`

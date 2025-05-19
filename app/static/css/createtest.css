@@ -72,10 +72,18 @@ input[type="number"], input[type="date"], select[type="questiontype"] {
     height: 1px;
 }
 
-textarea, select {
+textarea {
     display: block;
     padding: 8px;
     width: 80%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+select {
+    display: block;
+    padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;

@@ -60,7 +60,21 @@ type ProfilePageData struct {
 	Group    string `json:"Group"`
 }
 
+type Course struct {
+	Id    int    `json:"id"`
+	Name  string `json:"Name"`
+	Files []File `json:"Files"`
+	Tests []Test `json:"Tests"`
+}
+
+type File struct {
+	Name       string    `json:"Name"`
+	UploadDate time.Time `json:"UploadDate"`
+}
+
 type TeacherCoursesPageData struct {
+	Courses []Course `json:"Courses"`
+	Groups  []Group  `json:"Groups"`
 }
 
 type CoursesPageData struct {
@@ -561,6 +575,90 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	var data TeacherCoursesPageData
 
+	// Получение количества курсов в БД
+	var coursesCount int
+	err = db.QueryRow(`SELECT COUNT(uc.id)
+FROM users u
+JOIN users_courses uc ON u.id = uc.id_user
+JOIN courses c ON uc.id_course = c.id
+WHERE u.username = $1`, username).Scan(&coursesCount)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
+
+	// Считывание курсов из БД
+	courses := make([]Course, coursesCount)
+	for i := 1; i <= coursesCount; i++ {
+		var id int
+		var name string
+		err = db.QueryRow(`WITH numbered_rows AS (
+    	SELECT c.id, c.name, ROW_NUMBER() OVER (ORDER BY c.id DESC) as row_num
+	FROM users u
+	JOIN users_courses uc ON u.id = uc.id_user
+	JOIN courses c ON uc.id_course = c.id
+	WHERE u.username = $1
+)
+SELECT id, name
+FROM numbered_rows
+WHERE row_num = $2`, username, i).Scan(&id, &name)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Println(name)
+		courses[i-1] = Course{Id: id, Name: name}
+	}
+
+	data.Courses = courses
+
+	// Считывание групп из БД
+	var groupsCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM groups").Scan(&groupsCount)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Количество групп " + strconv.Itoa(groupsCount))
+
+	groups := make([]Group, groupsCount)
+	for i := 1; i <= groupsCount; i++ {
+		var id int
+		var name string
+		err = db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM groups) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Println(name)
+		groups[i-1] = Group{Id: id, Name: name}
+	}
+
+	data.Groups = groups
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		log.Println("Ошибка в преобразовании в JSON")
@@ -615,7 +713,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	var data CoursesPageData
+	var data TeacherCoursesPageData
 
 	// Получение количества курсов в БД
 	var coursesCount int
@@ -633,7 +731,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
 
 	// Считывание курсов из БД
-	courses := make([]string, coursesCount)
+	courses := make([]Course, coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
@@ -648,7 +746,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println(name)
-		courses[i-1] = name
+		courses[i-1] = Course{Id: id, Name: name}
 	}
 
 	data.Courses = courses
