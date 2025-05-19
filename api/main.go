@@ -912,6 +912,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
 	}
 
 	// Достаем информацию о тестах из БД
@@ -976,26 +977,27 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 
 	// Устанавливаем заголовок Content-Type
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	// Кодируем данные в JSON и отправляем
 	if err := json.NewEncoder(w).Encode(testsData); err != nil {
 		http.Error(w, "Ошибка при формировании JSON", http.StatusInternalServerError)
-	}
-
-	jsonData, err := json.Marshal(testsData)
-	if err != nil {
-		log.Println("Ошибка в преобразовании в JSON")
-		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println(utf8.RuneCountInString(string(jsonData)))
-	log.Println(string(jsonData))
+	// jsonData, err := json.Marshal(testsData)
+	// if err != nil {
+	// 	log.Println("Ошибка в преобразовании в JSON")
+	// 	sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+	// 	return
+	// }
 
-	// Отправляем JSON-ответ
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(jsonData)
+	// 	log.Println(utf8.RuneCountInString(string(jsonData)))
+	// 	log.Println(string(jsonData))
+
+	// 	// Отправляем JSON-ответ
+	// 	w.WriteHeader(http.StatusOK)
+	// 	json.NewEncoder(w).Encode(jsonData)
 }
 
 // Добавление пользователя через админ панель

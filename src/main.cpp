@@ -210,7 +210,7 @@ struct Test {
     std::string Title;
     std::tm UploadDate;
     std::tm EndDate;
-    std::string Duration; // В секундах
+    int Duration; // В секундах
     int Attempts;
 };
 
@@ -230,20 +230,20 @@ namespace nlohmann {
     template <>
     struct adl_serializer<Test> {
         static void from_json(const json& j, Test& t) {
-            j.at("Id").get_to(t.Id);
-            j.at("Title").get_to(t.Title);
+            j.at("id").get_to(t.Id);
+            j.at("title").get_to(t.Title);
 
             std::string upload_date_str, end_date_str;
-            j.at("UploadDate").get_to(upload_date_str);
-            j.at("EndDate").get_to(end_date_str);
+            j.at("upload_date").get_to(upload_date_str);
+            j.at("end_date").get_to(end_date_str);
 
             if (!parse_date(upload_date_str, t.UploadDate) ||
                 !parse_date(end_date_str, t.EndDate)) {
                 std::cout << "Falied to parse date" << std::endl;
             }
 
-            j.at("Duration").get_to(t.Duration);
-            j.at("Attempts").get_to(t.Attempts);
+            j.at("duration").get_to(t.Duration);
+            j.at("attempts").get_to(t.Attempts);
         }
     };
 
@@ -328,7 +328,7 @@ int main()
         // Добавление строк
         if (got_tests_data) {
             for (int i = 0; i < tests_data.Tests.size(); i++) {
-                std::string duration = std::to_string(std::stoi(tests_data.Tests[i].Duration) / 60) + u8" минут";
+                std::string duration = std::to_string(tests_data.Tests[i].Duration / 60) + u8" минут";
                 listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), duration, std::to_string(tests_data.Tests[i].Attempts) });
             }
         }
@@ -478,7 +478,7 @@ int main()
             // Добавление строк
             if (got_tests_data) {
                 for (int i = 0; i < tests_data.Tests.size(); i++) {
-                    std::string duration = std::to_string(std::stoi(tests_data.Tests[i].Duration) / 60) + u8" минут";
+                    std::string duration = std::to_string(tests_data.Tests[i].Duration / 60) + u8" минут";
                     listView->addItem({ tests_data.Tests[i].Title, std::asctime(&tests_data.Tests[i].EndDate), duration, std::to_string(tests_data.Tests[i].Attempts) });
                 }
             }
@@ -513,7 +513,7 @@ int main()
             label->setPosition({ 25, 25 });
             label->setTextSize(24);
 
-            std::string duration = std::to_string(std::stoi(tests_data.Tests[listViewElement].Duration) / 60) + u8" минут";
+            std::string duration = std::to_string(tests_data.Tests[listViewElement].Duration / 60) + u8" минут";
             tgui::Label::Ptr info = tgui::Label::create(u8"Попыток: " + std::to_string(tests_data.Tests[listViewElement].Attempts) + u8" Ограничение по времени: " + duration);
             info->setPosition({ 25, 70 });
             info->setTextSize(14);
