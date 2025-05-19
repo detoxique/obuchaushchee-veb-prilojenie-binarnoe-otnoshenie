@@ -292,7 +292,7 @@ int main()
     }
     catch (const tgui::Exception& e) {
         std::cerr << "Failed to load font: " << e.what() << std::endl;
-        return 1;
+        //return 1;
     }
 
     std::string token = localStorage.GetAccessToken();
@@ -392,6 +392,21 @@ int main()
         button->setSize({ 60, 25 });
         button->setTextSize(14);
         button->onClick(login);
+
+        tgui::Button::Ptr disable = tgui::Button::create(u8"Отключить сетевой драйвер");
+        disable->setPosition({ 25, 25 });
+        disable->setSize({ 210, 25 });
+        disable->setTextSize(14);
+        disable->onClick(disable_network_interface);
+
+        tgui::Button::Ptr enable = tgui::Button::create(u8"Включить сетевой драйвер");
+        enable->setPosition({ 25, 75 });
+        enable->setSize({ 210, 25 });
+        enable->setTextSize(14);
+        enable->onClick(enable_network_interface);
+
+        gui.add(disable);
+        gui.add(enable);
 
         gui.add(label);
         gui.add(button);
