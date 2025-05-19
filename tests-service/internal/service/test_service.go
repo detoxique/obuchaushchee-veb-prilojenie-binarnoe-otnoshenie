@@ -183,7 +183,7 @@ func (s *TestService) calculateAttemptScore(ctx context.Context, attemptID int) 
 	return 0, nil
 }
 
-func (s *TestService) CreateTest(ctx context.Context, req *models.CreateTestRequest, authorID int) (*models.Test, error) {
+func (s *TestService) CreateTest(ctx context.Context, req *models.CreateTestRequest) (*models.Test, error) {
 	// Валидация (используйте github.com/go-playground/validator)
 	// if err := validator.New().Struct(req); err != nil {
 	//     return nil, err
@@ -211,6 +211,7 @@ func (s *TestService) CreateTest(ctx context.Context, req *models.CreateTestRequ
 
 	// Создаем тест
 	test := &models.Test{
+		CourseID: req.CourseID,
 		Title:    req.Title,
 		EndDate:  req.EndDate,
 		Duration: req.Duration,

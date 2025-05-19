@@ -33,12 +33,12 @@ func main() {
 	r.Route("/api/tests", func(r chi.Router) {
 		r.Post("/", testHandler.CreateTest)
 		r.Get("/{id}", testHandler.GetTest)
-		r.Post("/{id}/{iduser}/attempts", testHandler.StartAttempt)
+		r.Post("/attempts", testHandler.StartAttempt)
 	})
 
 	r.Route("/api/attempts", func(r chi.Router) {
-		r.Post("/{attempt_id}/{iduser}/answers", testHandler.SubmitAnswer)
-		r.Post("/{attempt_id}/{iduser}/finish", testHandler.FinishAttempt)
+		r.Post("/answers", testHandler.SubmitAnswer)
+		r.Post("/finish", testHandler.FinishAttempt)
 	})
 
 	// Запуск сервера

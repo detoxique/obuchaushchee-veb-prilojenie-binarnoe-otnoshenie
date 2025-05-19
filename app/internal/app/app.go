@@ -37,6 +37,7 @@ func Run(ctx context.Context) error {
 	http.HandleFunc("/admin", handlers.ServeAdminPage)
 	http.HandleFunc("/courses", handlers.ServeCoursesPage)
 	http.HandleFunc("/notifications", handlers.ServeNotificationsPage)
+	http.HandleFunc("/createtest", handlers.ServeCreateTestPage)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

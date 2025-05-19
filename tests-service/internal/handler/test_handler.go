@@ -44,19 +44,18 @@ func (h *TestHandler) GetTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TestHandler) StartAttempt(w http.ResponseWriter, r *http.Request) {
-	testID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	infoStart := struct {
+		Id     int `json:"id"`
+		UserID int `json:"user_id"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&infoStart)
 	if err != nil {
-		http.Error(w, "Invalid test ID", http.StatusBadRequest)
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
 
-	userID, err := strconv.Atoi(chi.URLParam(r, "iduser"))
-	if err != nil {
-		http.Error(w, "Invalid test ID", http.StatusBadRequest)
-		return
-	}
-
-	attempt, err := h.service.StartAttempt(r.Context(), userID, testID)
+	attempt, err := h.service.StartAttempt(r.Context(), infoStart.UserID, infoStart.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -67,27 +66,30 @@ func (h *TestHandler) StartAttempt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TestHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
-	attemptID, err := strconv.Atoi(chi.URLParam(r, "attempt_id"))
+	// attemptID, err := strconv.Atoi(chi.URLParam(r, "attempt_id"))
+	// if err != nil {
+	// 	http.Error(w, "Invalid attempt ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	// userID, err := strconv.Atoi(chi.URLParam(r, "iduser"))
+	// if err != nil {
+	// 	http.Error(w, "Invalid test ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	answerData := struct {
+		UserId int               `json:"user_id"`
+		Answer models.UserAnswer `json:"answer"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&answerData)
 	if err != nil {
-		http.Error(w, "Invalid attempt ID", http.StatusBadRequest)
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
 
-	userID, err := strconv.Atoi(chi.URLParam(r, "iduser"))
-	if err != nil {
-		http.Error(w, "Invalid test ID", http.StatusBadRequest)
-		return
-	}
-
-	var answer models.UserAnswer
-	if err := json.NewDecoder(r.Body).Decode(&answer); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	answer.AttemptID = attemptID
-
-	if err := h.service.SubmitAnswer(r.Context(), userID, &answer); err != nil {
+	if err := h.service.SubmitAnswer(r.Context(), answerData.UserId, &answerData.Answer); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -96,19 +98,18 @@ func (h *TestHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
-	attemptID, err := strconv.Atoi(chi.URLParam(r, "attempt_id"))
+	answerData := struct {
+		UserId    int `json:"user_id"`
+		AttemptId int `json:"attempt_id"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&answerData)
 	if err != nil {
-		http.Error(w, "Invalid attempt ID", http.StatusBadRequest)
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
 
-	userID, err := strconv.Atoi(chi.URLParam(r, "iduser"))
-	if err != nil {
-		http.Error(w, "Invalid test ID", http.StatusBadRequest)
-		return
-	}
-
-	attempt, err := h.service.FinishAttempt(r.Context(), userID, attemptID)
+	attempt, err := h.service.FinishAttempt(r.Context(), answerData.UserId, answerData.AttemptId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -119,9 +120,6 @@ func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TestHandler) CreateTest(w http.ResponseWriter, r *http.Request) {
-	// В реальном приложении userID получаем из JWT или сессии
-	userID := 1 // временное значение
-
 	var req models.CreateTestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -134,7 +132,7 @@ func (h *TestHandler) CreateTest(w http.ResponseWriter, r *http.Request) {
 	//     return
 	// }
 
-	test, err := h.service.CreateTest(r.Context(), &req, userID)
+	test, err := h.service.CreateTest(r.Context(), &req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

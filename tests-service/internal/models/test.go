@@ -7,6 +7,7 @@ import (
 
 type Test struct {
 	ID         int       `json:"id"`
+	CourseID   int       `json:"id_course"`
 	Title      string    `json:"title"`
 	UploadDate time.Time `json:"upload_date"`
 	EndDate    time.Time `json:"end_date"`
@@ -52,6 +53,7 @@ type UserAnswer struct {
 
 // ДTO для создания теста
 type CreateTestRequest struct {
+	CourseID  int                     `json:"course_id"`
 	Title     string                  `json:"title" validate:"required,min=3,max=255"`
 	Duration  int                     `json:"duration" validate:"min=0"` // в секундах
 	Attempts  int                     `json:"attempts" validate:"min=0"`

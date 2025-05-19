@@ -112,6 +112,15 @@ func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
 	UpdateStats()
 }
 
+func ServeCreateTestPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/createtest.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
 // Получение страницы профиля с данными
 func GetAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Получен запрос на получение данных админ панели")
@@ -1510,19 +1519,194 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	getInfo := struct {
+		Id int `json:"id"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&getInfo)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	body, err := json.Marshal(&getInfo)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Отправлен запрос на подтверждение токена")
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/tests/get", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func StartAttempt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	startInfo := struct {
+		Id    int    `json:"id"`
+		Token string `json:"token"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&startInfo)
+	if err != nil {
+		slog.Info("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	body, err := json.Marshal(&startInfo)
+	if err != nil {
+		slog.Info("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/tests/startattempt", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/attempts/answer", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func FinishAttempt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/attempts/finish", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		slog.Info("Ошибка сервера авторизации")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Извлекает JWT-токен из строки HTTP-запроса

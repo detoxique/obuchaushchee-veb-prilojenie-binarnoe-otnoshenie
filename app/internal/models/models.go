@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"html/template"
 	"time"
 )
@@ -147,4 +148,12 @@ type CreateAnswerOptionRequest struct {
 	OptionText string `json:"option_text" validate:"required,min=1"`
 	IsCorrect  bool   `json:"is_correct"`
 	Position   int    `json:"position" validate:"min=0"`
+}
+
+type UserAnswer struct {
+	ID           int             `json:"id"`
+	AttemptID    int             `json:"attempt_id"`
+	QuestionID   int             `json:"question_id"`
+	AnswerData   json.RawMessage `json:"answer_data"`
+	PointsEarned int             `json:"points_earned"`
 }

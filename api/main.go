@@ -100,12 +100,13 @@ type DeleteUserData struct {
 
 // Тесты
 type Test struct {
-	Id         int       `json:"Id"`
-	Title      string    `json:"Title"`
-	UploadDate time.Time `json:"UploadDate"`
-	EndDate    time.Time `json:"EndDate"`
-	Duration   string    `json:"Duration"`
-	Attempts   int       `json:"Attempts"`
+	ID         int       `json:"id"`
+	CourseID   int       `json:"id_course"`
+	Title      string    `json:"title"`
+	UploadDate time.Time `json:"upload_date"`
+	EndDate    time.Time `json:"end_date"`
+	Duration   int       `json:"duration"` // в секундах
+	Attempts   int       `json:"attempts"`
 }
 
 type TestsData struct {
@@ -840,7 +841,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		var title string
 		var upldate time.Time
 		var enddate time.Time
-		var duration string
+		var duration int
 		var attempts int
 		err = db.QueryRow(`WITH numbered_rows AS (
     							SELECT 
@@ -870,7 +871,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tests[i-1] = Test{Id: id, Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration, Attempts: attempts}
+		tests[i-1] = Test{ID: id, Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration, Attempts: attempts}
 	}
 
 	testsData := TestsData{Tests: tests}
@@ -883,20 +884,20 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка при формировании JSON", http.StatusInternalServerError)
 	}
 
-	// jsonData, err := json.Marshal(testsData)
-	// if err != nil {
-	// 	log.Println("Ошибка в преобразовании в JSON")
-	// 	sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
-	// 	return
-	// }
+	jsonData, err := json.Marshal(testsData)
+	if err != nil {
+		log.Println("Ошибка в преобразовании в JSON")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
 
-	// log.Println(utf8.RuneCountInString(string(jsonData)))
-	// log.Println(string(jsonData))
+	log.Println(utf8.RuneCountInString(string(jsonData)))
+	log.Println(string(jsonData))
 
-	// // Отправляем JSON-ответ
-	// w.Header().Set("Content-Type", "application/json")
-	// w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(jsonData)
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(jsonData)
 }
 
 // Добавление пользователя через админ панель
@@ -1097,7 +1098,7 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(&testrequest.Token)
+	body, err := json.Marshal(&testrequest)
 	if err != nil {
 		log.Println("Ошибка преобразования в JSON")
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -1105,7 +1106,7 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1310/api/", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://localhost:1310/api/tests", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
@@ -1133,19 +1134,267 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	getInfo := struct {
+		Id int `json:"id"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&getInfo)
+	if err != nil {
+		log.Println("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Get("http://localhost:1310/api/" + strconv.Itoa(getInfo.Id))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		log.Println("Ошибка сервера тестов")
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func StartAttempt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	startInfo := struct {
+		Id    int    `json:"id"`
+		Token string `json:"token"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&startInfo)
+	if err != nil {
+		log.Println("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	username := GetUsernameGromToken(startInfo.Token)
+	// Достаем ID пользователя из БД
+	var id int
+	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	infoStart := struct {
+		Id     int `json:"id"`
+		UserID int `json:"user_id"`
+	}{
+		Id:     startInfo.Id,
+		UserID: id,
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&infoStart)
+	if err != nil {
+		log.Println("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1310/api/tests/attempts", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	answer := struct {
+		Token  string            `json:"token"`
+		Answer models.UserAnswer `json:"answer"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&answer)
+	if err != nil {
+		log.Println("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	username := GetUsernameGromToken(answer.Token)
+	// Достаем ID пользователя из БД
+	var id int
+	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	answerData := struct {
+		UserId int               `json:"user_id"`
+		Answer models.UserAnswer `json:"answer"`
+	}{
+		UserId: id,
+		Answer: answer.Answer,
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&answerData)
+	if err != nil {
+		log.Println("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1310/api/attempts/answers", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func FinishAttempt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+	answer := struct {
+		Token     string            `json:"token"`
+		AttemptId models.UserAnswer `json:"attempt_id"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&answer)
+	if err != nil {
+		log.Println("Не удалось считать данные для входа")
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	username := GetUsernameGromToken(answer.Token)
+	// Достаем ID пользователя из БД
+	var id int
+	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	answerData := struct {
+		UserId    int               `json:"user_id"`
+		AttemptId models.UserAnswer `json:"attempt_id"`
+	}{
+		UserId:    id,
+		AttemptId: answer.AttemptId,
+	}
+
+	// Подготовка запроса к другому серверу
+	body, err := json.Marshal(&answerData)
+	if err != nil {
+		log.Println("Ошибка преобразования в JSON")
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1310/api/attempts/finish", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		// Перенаправление ошибки от другого сервера
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(body)
+		return
+	}
+
+	// Успешный ответ
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 // Отправление сообщения об ошибке
