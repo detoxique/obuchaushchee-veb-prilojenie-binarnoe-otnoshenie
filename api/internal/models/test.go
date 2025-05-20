@@ -53,6 +53,7 @@ type UserAnswer struct {
 
 // ДTO для создания теста
 type CreateTestRequest struct {
+	Token     string                  `json:"token"`
 	CourseID  int                     `json:"course_id"`
 	Title     string                  `json:"title" validate:"required,min=3,max=255"`
 	Duration  int                     `json:"duration" validate:"min=0"` // в секундах

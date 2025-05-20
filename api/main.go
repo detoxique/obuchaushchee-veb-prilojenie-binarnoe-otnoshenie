@@ -1162,11 +1162,11 @@ func main() {
 	http.HandleFunc("/api/admin/deletegroup", deleteGroup)
 
 	// API tests-service
-	http.HandleFunc("/api/tests", testHandler.CreateTest)
-	http.HandleFunc("/api/tests/get", testHandler.GetTest)
-	http.HandleFunc("/api/tests/startattempt", testHandler.StartAttempt)
+	http.HandleFunc("/api/tests/", testHandler.CreateTest)
+	http.HandleFunc("/api/tests/{id}", testHandler.GetTest)
+	http.HandleFunc("/api/tests/attempts", testHandler.StartAttempt)
 
-	http.HandleFunc("/api/attempts/answer", testHandler.SubmitAnswer)
+	http.HandleFunc("/api/attempts/answers", testHandler.SubmitAnswer)
 	http.HandleFunc("/api/attempts/finish", testHandler.FinishAttempt)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
