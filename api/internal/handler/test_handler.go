@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"api/internal/models"
+	"api/internal/service"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"tests-service/internal/models"
-	"tests-service/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -1,11 +1,11 @@
 package repository
 
 import (
+	"api/internal/models"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"tests-service/internal/models"
 )
 
 type TestRepository struct {

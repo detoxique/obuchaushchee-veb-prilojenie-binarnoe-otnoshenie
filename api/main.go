@@ -1,8 +1,10 @@
 package main
 
 import (
-	"api/models"
-	"bytes"
+	"api/internal/handler"
+	"api/internal/models"
+	"api/internal/repository"
+	"api/internal/service"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -22,111 +24,6 @@ const port string = ":1337"
 // БД
 var db *sql.DB
 
-// Данные для входа
-type LoginData struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type GroupData struct {
-	GroupName string `json:"GroupName"`
-}
-
-type DeleteGroupData struct {
-	Id string `json:"Id"`
-}
-
-// Ответ сервера
-type Response struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-// Токен
-type TokenResponse struct {
-	AccessToken string `json:"Authorization"`
-}
-
-// Оценка
-type Mark struct {
-	Course    string    `json:"Course"`
-	Date      time.Time `json:"Date"`
-	MarkValue string    `json:"MarkValue"`
-}
-
-// Данные страницы профиля
-type ProfilePageData struct {
-	Username string `json:"Username"`
-	Group    string `json:"Group"`
-}
-
-type Course struct {
-	Id    int    `json:"id"`
-	Name  string `json:"Name"`
-	Files []File `json:"Files"`
-	Tests []Test `json:"Tests"`
-}
-
-type File struct {
-	Name       string    `json:"Name"`
-	UploadDate time.Time `json:"UploadDate"`
-}
-
-type TeacherCoursesPageData struct {
-	Courses []Course `json:"Courses"`
-	Groups  []Group  `json:"Groups"`
-}
-
-type CoursesPageData struct {
-	Courses []string `json:"Courses"`
-}
-
-// Группа
-type Group struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-// Пользователь
-type User struct {
-	Id        int    `json:"id"`
-	Username  string `json:"Username"`
-	Role      string `json:"Role"`
-	GroupName string `json:"GroupName"`
-}
-
-type UserData struct {
-	Username  string `json:"Username"`
-	Password  string `json:"Password"`
-	Role      string `json:"Role"`
-	GroupName string `json:"GroupName"`
-}
-
-// Данные на админ панели(группы и пользователи)
-type AdminPanelData struct {
-	Groups []Group `json:"Groups"`
-	Users  []User  `json:"Users"`
-}
-
-type DeleteUserData struct {
-	Name string `json:"Username"`
-}
-
-// Тесты
-type Test struct {
-	ID         int       `json:"id"`
-	CourseID   int       `json:"id_course"`
-	Title      string    `json:"title"`
-	UploadDate time.Time `json:"upload_date"`
-	EndDate    time.Time `json:"end_date"`
-	Duration   int       `json:"duration"` // в секундах
-	Attempts   int       `json:"attempts"`
-}
-
-type TestsData struct {
-	Tests []Test `json:"Tests"`
-}
-
 // Авторизация
 func handleAuth(w http.ResponseWriter, r *http.Request) {
 	// Обрабатывать только POST запросы
@@ -135,7 +32,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var loginData LoginData
+	var loginData models.LoginData
 
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&loginData)
@@ -182,7 +79,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Формируем ответ
-	response := Response{
+	response := models.Response{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
@@ -369,7 +266,7 @@ func refreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Формируем ответ
-	response := Response{
+	response := models.Response{
 		AccessToken:  accessToken,
 		RefreshToken: token,
 	}
@@ -428,7 +325,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
-	data := ProfilePageData{
+	data := models.ProfilePageData{
 		Username: username,
 		Group:    group,
 	}
@@ -501,7 +398,7 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
-	data := ProfilePageData{
+	data := models.ProfilePageData{
 		Username: username,
 		Group:    group,
 	}
@@ -573,7 +470,7 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
-	var data TeacherCoursesPageData
+	var data models.TeacherCoursesPageData
 
 	// Получение количества курсов в БД
 	var coursesCount int
@@ -595,7 +492,7 @@ WHERE u.username = $1`, username).Scan(&coursesCount)
 	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
 
 	// Считывание курсов из БД
-	courses := make([]Course, coursesCount)
+	courses := make([]models.Course, coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
@@ -619,7 +516,7 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 			return
 		}
 		log.Println(name)
-		courses[i-1] = Course{Id: id, Name: name}
+		courses[i-1] = models.Course{Id: id, Name: name}
 	}
 
 	data.Courses = courses
@@ -639,7 +536,7 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 
 	log.Println("Количество групп " + strconv.Itoa(groupsCount))
 
-	groups := make([]Group, groupsCount)
+	groups := make([]models.Group, groupsCount)
 	for i := 1; i <= groupsCount; i++ {
 		var id int
 		var name string
@@ -654,7 +551,7 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 			return
 		}
 		log.Println(name)
-		groups[i-1] = Group{Id: id, Name: name}
+		groups[i-1] = models.Group{Id: id, Name: name}
 	}
 
 	data.Groups = groups
@@ -713,7 +610,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	var data TeacherCoursesPageData
+	var data models.TeacherCoursesPageData
 
 	// Получение количества курсов в БД
 	var coursesCount int
@@ -731,7 +628,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
 
 	// Считывание курсов из БД
-	courses := make([]Course, coursesCount)
+	courses := make([]models.Course, coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
@@ -746,7 +643,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println(name)
-		courses[i-1] = Course{Id: id, Name: name}
+		courses[i-1] = models.Course{Id: id, Name: name}
 	}
 
 	data.Courses = courses
@@ -833,7 +730,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Количество пользователей: " + strconv.Itoa(usersCount))
 
 	// Считывание групп из БД
-	groups := make([]Group, groupsCount)
+	groups := make([]models.Group, groupsCount)
 	for i := 1; i <= groupsCount; i++ {
 		var id int
 		var name string
@@ -847,11 +744,11 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		groups[i-1] = Group{Id: id, Name: name}
+		groups[i-1] = models.Group{Id: id, Name: name}
 	}
 
 	// Считывание пользователей из БД
-	users := make([]User, usersCount)
+	users := make([]models.User, usersCount)
 	for i := 1; i <= usersCount; i++ {
 		var id int
 		var name string
@@ -873,7 +770,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 				groupName = groups[i].Name
 			}
 		}
-		users[i-1] = User{Id: id, Username: name, Role: role, GroupName: groupName}
+		users[i-1] = models.User{Id: id, Username: name, Role: role, GroupName: groupName}
 	}
 
 	// log.Printf("Содержимое массива: ")
@@ -882,7 +779,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	// 	log.Printf(strconv.Itoa(h.Id) + " " + h.Name + " ")
 	// }
 
-	adminData := AdminPanelData{
+	adminData := models.AdminPanelData{
 		Groups: groups,
 		Users:  users,
 	}
@@ -934,7 +831,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tests := make([]Test, testsCount)
+	tests := make([]models.Test, testsCount)
 	for i := 1; i <= testsCount; i++ {
 		var id int
 		var title string
@@ -970,10 +867,10 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tests[i-1] = Test{ID: id, Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration, Attempts: attempts}
+		tests[i-1] = models.Test{ID: id, Title: title, UploadDate: upldate, EndDate: enddate, Duration: duration, Attempts: attempts}
 	}
 
-	testsData := TestsData{Tests: tests}
+	testsData := models.TestsData{Tests: tests}
 
 	// Устанавливаем заголовок Content-Type
 	w.Header().Set("Content-Type", "application/json")
@@ -1008,7 +905,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userData UserData
+	var userData models.UserData
 
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&userData)
@@ -1064,7 +961,7 @@ func addGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var groupData GroupData
+	var groupData models.GroupData
 
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&groupData)
@@ -1109,7 +1006,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user DeleteUserData
+	var user models.DeleteUserData
 
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -1149,7 +1046,7 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data DeleteGroupData
+	var data models.DeleteGroupData
 
 	// Чтение JSON
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -1179,322 +1076,6 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	// Успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-}
-
-func CreateTest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var testrequest models.CreateTestRequest
-
-	err := json.NewDecoder(r.Body).Decode(&testrequest)
-	if err != nil {
-		log.Println("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(&testrequest)
-	if err != nil {
-		log.Println("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1310/api/tests", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
-	if resp.StatusCode != http.StatusOK {
-		// Перенаправление ошибки от другого сервера
-		log.Println("Ошибка сервера тестов")
-		body, _ := io.ReadAll(resp.Body)
-		w.WriteHeader(resp.StatusCode)
-		w.Write(body)
-		return
-	}
-
-	// Успешный ответ
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
-	w.Write(body)
-}
-
-func GetTest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-	getInfo := struct {
-		Id int `json:"id"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&getInfo)
-	if err != nil {
-		log.Println("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	// Отправка запроса на другой сервер
-	resp, err := http.Get("http://localhost:1310/api/" + strconv.Itoa(getInfo.Id))
-	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
-	if resp.StatusCode != http.StatusOK {
-		// Перенаправление ошибки от другого сервера
-		log.Println("Ошибка сервера тестов")
-		body, _ := io.ReadAll(resp.Body)
-		w.WriteHeader(resp.StatusCode)
-		w.Write(body)
-		return
-	}
-
-	// Успешный ответ
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
-	w.Write(body)
-}
-
-func StartAttempt(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-	startInfo := struct {
-		Id    int    `json:"id"`
-		Token string `json:"token"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&startInfo)
-	if err != nil {
-		log.Println("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	username := GetUsernameGromToken(startInfo.Token)
-	// Достаем ID пользователя из БД
-	var id int
-	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
-	if err == sql.ErrNoRows {
-		log.Println("Неправильные данные")
-		sendError(w, "Неправильные данные", http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		log.Println("Ошибка базы данных")
-		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	infoStart := struct {
-		Id     int `json:"id"`
-		UserID int `json:"user_id"`
-	}{
-		Id:     startInfo.Id,
-		UserID: id,
-	}
-
-	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(&infoStart)
-	if err != nil {
-		log.Println("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1310/api/tests/attempts", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Успешный ответ
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
-	w.Write(body)
-}
-
-func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-	answer := struct {
-		Token  string            `json:"token"`
-		Answer models.UserAnswer `json:"answer"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&answer)
-	if err != nil {
-		log.Println("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	username := GetUsernameGromToken(answer.Token)
-	// Достаем ID пользователя из БД
-	var id int
-	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
-	if err == sql.ErrNoRows {
-		log.Println("Неправильные данные")
-		sendError(w, "Неправильные данные", http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		log.Println("Ошибка базы данных")
-		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	answerData := struct {
-		UserId int               `json:"user_id"`
-		Answer models.UserAnswer `json:"answer"`
-	}{
-		UserId: id,
-		Answer: answer.Answer,
-	}
-
-	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(&answerData)
-	if err != nil {
-		log.Println("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1310/api/attempts/answers", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
-	if resp.StatusCode != http.StatusOK {
-		// Перенаправление ошибки от другого сервера
-		body, _ := io.ReadAll(resp.Body)
-		w.WriteHeader(resp.StatusCode)
-		w.Write(body)
-		return
-	}
-
-	// Успешный ответ
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
-	w.Write(body)
-}
-
-func FinishAttempt(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
-	answer := struct {
-		Token     string            `json:"token"`
-		AttemptId models.UserAnswer `json:"attempt_id"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&answer)
-	if err != nil {
-		log.Println("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	username := GetUsernameGromToken(answer.Token)
-	// Достаем ID пользователя из БД
-	var id int
-	err = db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&id)
-	if err == sql.ErrNoRows {
-		log.Println("Неправильные данные")
-		sendError(w, "Неправильные данные", http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		log.Println("Ошибка базы данных")
-		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	answerData := struct {
-		UserId    int               `json:"user_id"`
-		AttemptId models.UserAnswer `json:"attempt_id"`
-	}{
-		UserId:    id,
-		AttemptId: answer.AttemptId,
-	}
-
-	// Подготовка запроса к другому серверу
-	body, err := json.Marshal(&answerData)
-	if err != nil {
-		log.Println("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1310/api/attempts/finish", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Чтение ответа от другого сервера
-	w.Header().Set("Content-Type", "application/json")
-	if resp.StatusCode != http.StatusOK {
-		// Перенаправление ошибки от другого сервера
-		body, _ := io.ReadAll(resp.Body)
-		w.WriteHeader(resp.StatusCode)
-		w.Write(body)
-		return
-	}
-
-	// Успешный ответ
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
-	w.Write(body)
 }
 
 // Отправление сообщения об ошибке
@@ -1558,6 +1139,11 @@ func main() {
 
 	log.Println("Сервер API запущен на " + port)
 
+	// Инициализация слоев приложения
+	testRepo := repository.NewTestRepository(db)
+	testService := service.NewTestService(testRepo)
+	testHandler := handler.NewTestHandler(testService)
+
 	http.HandleFunc("/api/auth", handleAuth)
 	http.HandleFunc("/api/verify", verifyToken)
 	http.HandleFunc("/api/verifyadmin", verifyAdmin)
@@ -1576,12 +1162,12 @@ func main() {
 	http.HandleFunc("/api/admin/deletegroup", deleteGroup)
 
 	// API tests-service
-	http.HandleFunc("/api/tests", CreateTest)
-	http.HandleFunc("/api/tests/get", GetTest)
-	http.HandleFunc("/api/tests/startattempt", StartAttempt)
+	http.HandleFunc("/api/tests", testHandler.CreateTest)
+	http.HandleFunc("/api/tests/get", testHandler.GetTest)
+	http.HandleFunc("/api/tests/startattempt", testHandler.StartAttempt)
 
-	http.HandleFunc("/api/attempts/answer", SubmitAnswer)
-	http.HandleFunc("/api/attempts/finish", FinishAttempt)
+	http.HandleFunc("/api/attempts/answer", testHandler.SubmitAnswer)
+	http.HandleFunc("/api/attempts/finish", testHandler.FinishAttempt)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
 	err := http.ListenAndServe(port, nil)

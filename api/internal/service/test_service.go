@@ -1,12 +1,12 @@
 package service
 
 import (
+	"api/internal/models"
+	"api/internal/repository"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"tests-service/internal/models"
-	"tests-service/internal/repository"
 	"time"
 )
 
