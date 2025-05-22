@@ -22,7 +22,7 @@ import (
 const port string = ":1337"
 
 // БД
-var db *sql.DB
+var Db *sql.DB
 
 // Авторизация
 func handleAuth(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +44,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка пользователя в БД
 	var storedHash string
-	err = db.QueryRow("SELECT password FROM users WHERE username = $1", loginData.Username).Scan(&storedHash)
+	err = Db.QueryRow("SELECT password FROM users WHERE username = $1", loginData.Username).Scan(&storedHash)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -64,14 +64,14 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Генерация токенов
-	accessToken, err := GenerateAccessToken(loginData.Username)
+	accessToken, err := service.GenerateAccessToken(loginData.Username)
 	if err != nil {
 		log.Println("Не удалось создать access токен" + err.Error())
 		http.Error(w, "Не удалось создать access токен", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := GenerateRefreshToken(loginData.Username)
+	refreshToken, err := service.GenerateRefreshToken(loginData.Username)
 	if err != nil {
 		log.Println("Не удалось создать refresh токен")
 		http.Error(w, "Не удалось создать refresh токен", http.StatusInternalServerError)
@@ -106,7 +106,7 @@ func verifyToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 	}
 
-	tokenCheck, err := CheckAccessToken(token)
+	tokenCheck, err := service.CheckAccessToken(token)
 	if err != nil {
 		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -138,7 +138,7 @@ func verifyAdmin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	tokenCheck, err := CheckAccessToken(token)
+	tokenCheck, err := service.CheckAccessToken(token)
 	if err != nil {
 		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -150,12 +150,12 @@ func verifyAdmin(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -192,7 +192,7 @@ func verifyTeacher(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	tokenCheck, err := CheckAccessToken(token)
+	tokenCheck, err := service.CheckAccessToken(token)
 	if err != nil {
 		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -204,12 +204,12 @@ func verifyTeacher(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -245,7 +245,7 @@ func refreshToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	tokenCheck, err := CheckRefreshToken(token)
+	tokenCheck, err := service.CheckRefreshToken(token)
 	if err != nil {
 		log.Println("Токен не валиден. " + err.Error())
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -258,7 +258,7 @@ func refreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Если refresh токен валиден, генерируем новый access токен
-	accessToken, err := GenerateAccessToken(GetUsernameGromToken(token))
+	accessToken, err := service.GenerateAccessToken(service.GetUsernameGromToken(token))
 	if err != nil {
 		log.Println("Не удалось создать access токен. " + err.Error())
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -294,12 +294,12 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role, group string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -312,7 +312,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	err = Db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -361,12 +361,12 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role, group string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -385,7 +385,7 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	err = Db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -433,12 +433,12 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role, group string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -457,7 +457,7 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	err = db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	err = Db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -474,7 +474,7 @@ func getTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	// Получение количества курсов в БД
 	var coursesCount int
-	err = db.QueryRow(`SELECT COUNT(uc.id)
+	err = Db.QueryRow(`SELECT COUNT(uc.id)
 FROM users u
 JOIN users_courses uc ON u.id = uc.id_user
 JOIN courses c ON uc.id_course = c.id
@@ -496,7 +496,7 @@ WHERE u.username = $1`, username).Scan(&coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
-		err = db.QueryRow(`WITH numbered_rows AS (
+		err = Db.QueryRow(`WITH numbered_rows AS (
     	SELECT c.id, c.name, ROW_NUMBER() OVER (ORDER BY c.id DESC) as row_num
 	FROM users u
 	JOIN users_courses uc ON u.id = uc.id_user
@@ -523,7 +523,7 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 
 	// Считывание групп из БД
 	var groupsCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM groups").Scan(&groupsCount)
+	err = Db.QueryRow("SELECT COUNT(*) FROM groups").Scan(&groupsCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -540,7 +540,7 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 	for i := 1; i <= groupsCount; i++ {
 		var id int
 		var name string
-		err = db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM groups) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
+		err = Db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM groups) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -586,12 +586,12 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -614,7 +614,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	// Получение количества курсов в БД
 	var coursesCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&coursesCount)
+	err = Db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&coursesCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -632,7 +632,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
-		err = db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM courses) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
+		err = Db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM courses) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -679,12 +679,12 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
 	var role string
-	err = db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -703,7 +703,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 
 	// Получение количества групп в БД
 	var groupsCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM groups").Scan(&groupsCount)
+	err = Db.QueryRow("SELECT COUNT(*) FROM groups").Scan(&groupsCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -716,7 +716,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 
 	// Получение количества пользователей в БД
 	var usersCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM users").Scan(&usersCount)
+	err = Db.QueryRow("SELECT COUNT(*) FROM users").Scan(&usersCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -734,7 +734,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 	for i := 1; i <= groupsCount; i++ {
 		var id int
 		var name string
-		err = db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM groups) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
+		err = Db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM groups) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -754,7 +754,7 @@ func getAdminPanelData(w http.ResponseWriter, r *http.Request) {
 		var name string
 		var role string
 		var group_id int
-		err = db.QueryRow("SELECT id, username, role, id_group FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM users) AS subquery WHERE row_num = $1", i).Scan(&id, &name, &role, &group_id)
+		err = Db.QueryRow("SELECT id, username, role, id_group FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM users) AS subquery WHERE row_num = $1", i).Scan(&id, &name, &role, &group_id)
 		if err == sql.ErrNoRows {
 			log.Println("Неправильные данные")
 			sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -813,12 +813,12 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Достаем информацию о тестах из БД
-	username := GetUsernameGromToken(token)
+	username := service.GetUsernameGromToken(token)
 
 	log.Println(username)
 
 	var testsCount int
-	err = db.QueryRow(`SELECT DISTINCT COUNT(*)
+	err = Db.QueryRow(`SELECT DISTINCT COUNT(*)
 						FROM users u
 						JOIN groups g ON u.id_group = g.id
 						JOIN groups_courses gc ON g.id = gc.id_group
@@ -839,7 +839,7 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 		var enddate time.Time
 		var duration int
 		var attempts int
-		err = db.QueryRow(`WITH numbered_rows AS (
+		err = Db.QueryRow(`WITH numbered_rows AS (
     							SELECT 
 									t.id,
       							    t.name, 
@@ -919,14 +919,14 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка пользователя в БД
 	var checkuser string
-	err = db.QueryRow("SELECT username FROM users WHERE username = $1", userData.Username).Scan(&checkuser)
+	err = Db.QueryRow("SELECT username FROM users WHERE username = $1", userData.Username).Scan(&checkuser)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Пользователя нет в базе, продолжаем
 			log.Println("Проверка прошла успешно, пользователей с таким именем нет")
 			// Ищем ID группы
 			var id int
-			err = db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
+			err = Db.QueryRow("SELECT id FROM groups WHERE name = $1", userData.GroupName).Scan(&id)
 			if err != nil {
 				log.Println("Неправильные данные")
 				sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -934,7 +934,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 			hash, _ := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
 
-			_, err := db.Exec("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id)
+			_, err := Db.Exec("INSERT INTO users (username, password, role, id_group) VALUES ($1, $2, $3, $4)", userData.Username, string(hash), userData.Role, id)
 			if err != nil {
 				log.Println("Ошибка базы данных")
 				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -975,11 +975,11 @@ func addGroup(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка группы в БД
 	var checkgroup string
-	err = db.QueryRow("SELECT name FROM groups WHERE name = $1", groupData.GroupName).Scan(&checkgroup)
+	err = Db.QueryRow("SELECT name FROM groups WHERE name = $1", groupData.GroupName).Scan(&checkgroup)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Группы нет в базе, продолжаем
-			_, err = db.Exec("INSERT INTO groups (name) VALUES ($1)", groupData.GroupName)
+			_, err = Db.Exec("INSERT INTO groups (name) VALUES ($1)", groupData.GroupName)
 			if err != nil {
 				log.Println("Ошибка базы данных")
 				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1018,7 +1018,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	log.Println("Удаляем пользователя " + user.Name)
 	// Проверка пользователя в БД
 	var checkUser string
-	err = db.QueryRow("SELECT username FROM users WHERE username = $1", user.Name).Scan(&checkUser)
+	err = Db.QueryRow("SELECT username FROM users WHERE username = $1", user.Name).Scan(&checkUser)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1026,7 +1026,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var delete string
-	err = db.QueryRow("DELETE FROM users WHERE username = $1", user.Name).Scan(&delete)
+	err = Db.QueryRow("DELETE FROM users WHERE username = $1", user.Name).Scan(&delete)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1058,7 +1058,7 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка группы в БД
 	var checkGroup string
-	err = db.QueryRow("SELECT name FROM groups WHERE id = $1", data.Id).Scan(&checkGroup)
+	err = Db.QueryRow("SELECT name FROM groups WHERE id = $1", data.Id).Scan(&checkGroup)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1066,7 +1066,7 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	// Группа есть в базе
 
-	_, err = db.Exec("DELETE FROM groups WHERE id = $1", data.Id)
+	_, err = Db.Exec("DELETE FROM groups WHERE id = $1", data.Id)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1126,7 +1126,7 @@ func connectDB() {
 	// Подключение к PostgreSQL
 	connStr := "postgres://postgres:123@localhost/portaldb?sslmode=disable"
 	var err error
-	db, err = sql.Open("postgres", connStr)
+	Db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Println("Database connection error:", err)
 		return
@@ -1140,7 +1140,7 @@ func main() {
 	log.Println("Сервер API запущен на " + port)
 
 	// Инициализация слоев приложения
-	testRepo := repository.NewTestRepository(db)
+	testRepo := repository.NewTestRepository(Db)
 	testService := service.NewTestService(testRepo)
 	testHandler := handler.NewTestHandler(testService)
 

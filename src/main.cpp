@@ -18,21 +18,56 @@
 #include <sys/socket.h>
 #endif
 
+std::string Interface_Name = "";
+
 std::string getInterfaceName() {
     std::string interface_name;
 #if defined(_WIN32) || defined(_WIN64)
-    interface_name = "Ethernet";  // Имя интерфейса в Windows
+    interface_name = "Ethernet";
 #elif defined(__linux__)
-    interface_name = "eth0";      // Обычное имя в Linux
+    // Получаем интерфейс по умолчанию через ip route
+    FILE* pipe = popen("ip route show default | awk '/default/ {print $5}'", "r");
+    if (pipe) {
+        char buffer[128];
+        if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            // Удаляем символ новой строки
+            size_t len = strlen(buffer);
+            if (len > 0 && buffer[len - 1] == '\n') {
+                buffer[len - 1] = '\0';
+            }
+            interface_name = buffer;
+        }
+        pclose(pipe);
+}
+    // Если не удалось определить, используем значение по умолчанию
+    if (interface_name.empty()) {
+        interface_name = "eth0";
+    }
 #elif defined(__APPLE__)
-    interface_name = "en0";       // Обычное имя в macOS
+    // Получаем интерфейс по умолчанию через route
+    FILE* pipe = popen("route get default 2>/dev/null | awk '/interface:/ {print $2}'", "r");
+    if (pipe) {
+        char buffer[128];
+        if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            // Удаляем символ новой строки
+            size_t len = strlen(buffer);
+            if (len > 0 && buffer[len - 1] == '\n') {
+                buffer[len - 1] = '\0';
+            }
+            interface_name = buffer;
+        }
+        pclose(pipe);
+    }
+    // Если не удалось определить, используем значение по умолчанию
+    if (interface_name.empty()) {
+        interface_name = "en0";
+    }
 #endif
-
     return interface_name;
 }
 
 bool disable_network_interface() {
-    std::string interface_name = getInterfaceName();
+    std::string interface_name = Interface_Name;
 
 #if defined(_WIN32) || defined(_WIN64)
     // Windows: Используем netsh (простой способ)
@@ -79,7 +114,7 @@ bool disable_network_interface() {
 }
 
 bool enable_network_interface() {
-    std::string interface_name = getInterfaceName();
+    std::string interface_name = Interface_Name;
 
 #if defined(_WIN32) || defined(_WIN64)
     // Windows: Используем netsh
@@ -282,6 +317,8 @@ int main()
     SetConsoleCP(1251); 
     SetConsoleOutputCP(1251);
 #endif
+
+    Interface_Name = getInterfaceName();
 
     sf::RenderWindow window{ {1280, 720}, L"Курсовая работа Карпенко М.В." };
     tgui::Gui gui{ window };

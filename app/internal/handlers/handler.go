@@ -1635,7 +1635,7 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Отправлен запрос на подтверждение токена")
 
 	// Отправка запроса на другой сервер
-	resp, err = http.Post("http://localhost:1337/api/tests", "application/json", bytes.NewBuffer(body))
+	resp, err = http.Post("http://localhost:1337/api/tests/", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
@@ -1669,28 +1669,10 @@ func GetTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getInfo := struct {
-		Id int `json:"id"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&getInfo)
-	if err != nil {
-		slog.Info("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	body, err := json.Marshal(&getInfo)
-	if err != nil {
-		slog.Info("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
-
 	slog.Info("Отправлен запрос на подтверждение токена")
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1337/api/tests/get", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Get("http://localhost:1337/api/tests/{id}")
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
@@ -1709,7 +1691,7 @@ func GetTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Успешный ответ
-	body, err = io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
 		return
@@ -1744,7 +1726,7 @@ func StartAttempt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1337/api/tests/startattempt", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://localhost:1337/api/tests/attempts", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return

@@ -45,8 +45,8 @@ func (h *TestHandler) GetTest(w http.ResponseWriter, r *http.Request) {
 
 func (h *TestHandler) StartAttempt(w http.ResponseWriter, r *http.Request) {
 	infoStart := struct {
-		Id     int `json:"id"`
-		UserID int `json:"user_id"`
+		Id    int    `json:"id"`
+		Token string `json:"token"`
 	}{}
 
 	err := json.NewDecoder(r.Body).Decode(&infoStart)
@@ -55,7 +55,16 @@ func (h *TestHandler) StartAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attempt, err := h.service.StartAttempt(r.Context(), infoStart.UserID, infoStart.Id)
+	username := service.GetUsernameGromToken(infoStart.Token)
+
+	var UserID int
+	err = h.service.Repo.Db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&UserID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	attempt, err := h.service.StartAttempt(r.Context(), UserID, infoStart.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
