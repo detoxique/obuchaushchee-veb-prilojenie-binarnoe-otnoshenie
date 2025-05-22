@@ -4,10 +4,10 @@ import (
 	"api/internal/models"
 	"api/internal/service"
 	"encoding/json"
+	"log"
 	"net/http"
-	"strconv"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/mux"
 )
 
 type TestHandler struct {
@@ -19,14 +19,12 @@ func NewTestHandler(s *service.TestService) *TestHandler {
 }
 
 func (h *TestHandler) GetTest(w http.ResponseWriter, r *http.Request) {
-	testID, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		http.Error(w, "Invalid test ID", http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+	testID := vars["id"]
 
 	test, questions, err := h.service.GetTest(r.Context(), testID)
 	if err != nil {
+		log.Println("Error getting test " + err.Error())
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

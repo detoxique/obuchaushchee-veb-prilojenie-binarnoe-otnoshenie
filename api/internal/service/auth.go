@@ -64,9 +64,9 @@ func GetUsernameGromToken(tokenString string) string {
 }
 
 func CheckAccessToken(tokenString string) (bool, error) {
-	if tokenString != "undefined" && tokenString != "" {
-		debugToken(tokenString)
-	}
+	// if tokenString != "undefined" && tokenString != "" {
+	// 	debugToken(tokenString)
+	// }
 
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Проверяем, что алгоритм подписи тот же, что использовался при генерации

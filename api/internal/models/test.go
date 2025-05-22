@@ -19,7 +19,7 @@ type Question struct {
 	ID           int            `json:"id"`
 	TestID       int            `json:"test_id"`
 	QuestionText string         `json:"question_text"`
-	QuestionType string         `json:"question_type"` // single_choice, multiple_choice, text, matching
+	QuestionType string         `json:"question_type"` // single_choice, multiple_choice, text_answer, matching
 	Points       int            `json:"points"`
 	Position     int            `json:"position"`
 	Options      []AnswerOption `json:"options,omitempty"`

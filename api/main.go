@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/gorilla/mux"
+
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -1139,38 +1141,40 @@ func main() {
 
 	log.Println("Сервер API запущен на " + port)
 
+	r := mux.NewRouter()
+
 	// Инициализация слоев приложения
 	testRepo := repository.NewTestRepository(Db)
 	testService := service.NewTestService(testRepo)
 	testHandler := handler.NewTestHandler(testService)
 
-	http.HandleFunc("/api/auth", handleAuth)
-	http.HandleFunc("/api/verify", verifyToken)
-	http.HandleFunc("/api/verifyadmin", verifyAdmin)
-	http.HandleFunc("/api/verifyteacher", verifyTeacher)
-	http.HandleFunc("/api/refreshtoken", refreshToken)
-	http.HandleFunc("/api/getprofiledata", getProfileData)
-	http.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
-	http.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
-	http.HandleFunc("/api/getcoursesdata", getCoursesData)
-	http.HandleFunc("/api/gettestsdata", getTestsData)
+	r.HandleFunc("/api/auth", handleAuth)
+	r.HandleFunc("/api/verify", verifyToken)
+	r.HandleFunc("/api/verifyadmin", verifyAdmin)
+	r.HandleFunc("/api/verifyteacher", verifyTeacher)
+	r.HandleFunc("/api/refreshtoken", refreshToken)
+	r.HandleFunc("/api/getprofiledata", getProfileData)
+	r.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
+	r.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
+	r.HandleFunc("/api/getcoursesdata", getCoursesData)
+	r.HandleFunc("/api/gettestsdata", getTestsData)
 
-	http.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
-	http.HandleFunc("/api/admin/adduser", addUser)
-	http.HandleFunc("/api/admin/deleteuser", deleteUser)
-	http.HandleFunc("/api/admin/addgroup", addGroup)
-	http.HandleFunc("/api/admin/deletegroup", deleteGroup)
+	r.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
+	r.HandleFunc("/api/admin/adduser", addUser)
+	r.HandleFunc("/api/admin/deleteuser", deleteUser)
+	r.HandleFunc("/api/admin/addgroup", addGroup)
+	r.HandleFunc("/api/admin/deletegroup", deleteGroup)
 
 	// API tests-service
-	http.HandleFunc("/api/tests/", testHandler.CreateTest)
-	http.HandleFunc("/api/tests/{id}", testHandler.GetTest)
-	http.HandleFunc("/api/tests/attempts", testHandler.StartAttempt)
+	r.HandleFunc("/api/tests/", testHandler.CreateTest)
+	r.HandleFunc("/api/tests/{id}", testHandler.GetTest)
+	r.HandleFunc("/api/tests/attempts", testHandler.StartAttempt)
 
-	http.HandleFunc("/api/attempts/answers", testHandler.SubmitAnswer)
-	http.HandleFunc("/api/attempts/finish", testHandler.FinishAttempt)
+	r.HandleFunc("/api/attempts/answers", testHandler.SubmitAnswer)
+	r.HandleFunc("/api/attempts/finish", testHandler.FinishAttempt)
 
 	// Запуск сервера (Ctrl + C, чтобы выключить)
-	err := http.ListenAndServe(port, nil)
+	err := http.ListenAndServe(port, r)
 	if err != nil {
 		log.Fatal(err)
 	}

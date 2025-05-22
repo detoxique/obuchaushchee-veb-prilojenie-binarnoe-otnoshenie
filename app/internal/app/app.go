@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
+
 	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/handlers"
 	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/models"
 )
@@ -14,9 +16,7 @@ import (
 func Run(ctx context.Context) error {
 	slog.Info("Сервер запущен. Порт: 8080")
 
-	s := http.Server{
-		Addr: ":8080",
-	}
+	r := mux.NewRouter()
 	// Загрузка статистики
 
 	// Чтение файла
@@ -31,55 +31,50 @@ func Run(ctx context.Context) error {
 	}
 
 	// HTML
-	http.HandleFunc("/", handlers.ServeLoginPage)
-	http.HandleFunc("/profile", handlers.ServeProfilePage)
-	http.HandleFunc("/marks", handlers.ServeMarksPage)
-	http.HandleFunc("/admin", handlers.ServeAdminPage)
-	http.HandleFunc("/courses", handlers.ServeCoursesPage)
-	http.HandleFunc("/notifications", handlers.ServeNotificationsPage)
-	http.HandleFunc("/createtest", handlers.ServeCreateTestPage)
+	r.HandleFunc("/", handlers.ServeLoginPage)
+	r.HandleFunc("/profile", handlers.ServeProfilePage)
+	r.HandleFunc("/marks", handlers.ServeMarksPage)
+	r.HandleFunc("/admin", handlers.ServeAdminPage)
+	r.HandleFunc("/courses", handlers.ServeCoursesPage)
+	r.HandleFunc("/notifications", handlers.ServeNotificationsPage)
+	r.HandleFunc("/createtest", handlers.ServeCreateTestPage)
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	// API
-	http.HandleFunc("/api/login", handlers.HandleLogin)
-	http.HandleFunc("/api/verify", handlers.HandleVerifyToken)
-	http.HandleFunc("/api/verifyadmin", handlers.HandleVerifyAdmin)
-	http.HandleFunc("/api/verifyteacher", handlers.HandleVerifyTeacher)
-	http.HandleFunc("/api/refreshtoken", handlers.HandleRefreshToken)
-	http.HandleFunc("/api/getprofiledata", handlers.GetProfileData)
-	http.HandleFunc("/api/getteacherprofiledata", handlers.GetTeacherProfileData)
-	http.HandleFunc("/api/getadminpaneldata", handlers.GetAdminPanelData)
-	http.HandleFunc("/api/getteachercoursesdata", handlers.GetTeacherCoursesData)
-	http.HandleFunc("/api/getcoursesdata", handlers.GetCoursesData)
-	http.HandleFunc("/api/getteachermarksdata", handlers.GetTeacherMarksData)
-	http.HandleFunc("/api/getmarksdata", handlers.GetMarksData)
-	http.HandleFunc("/api/gettestsdata", handlers.GetTestsData)
-	http.HandleFunc("/api/gettest", handlers.GetTest)
-	http.HandleFunc("/api/upload", handlers.HandleUploadFile)
+	r.HandleFunc("/api/login", handlers.HandleLogin)
+	r.HandleFunc("/api/verify", handlers.HandleVerifyToken)
+	r.HandleFunc("/api/verifyadmin", handlers.HandleVerifyAdmin)
+	r.HandleFunc("/api/verifyteacher", handlers.HandleVerifyTeacher)
+	r.HandleFunc("/api/refreshtoken", handlers.HandleRefreshToken)
+	r.HandleFunc("/api/getprofiledata", handlers.GetProfileData)
+	r.HandleFunc("/api/getteacherprofiledata", handlers.GetTeacherProfileData)
+	r.HandleFunc("/api/getadminpaneldata", handlers.GetAdminPanelData)
+	r.HandleFunc("/api/getteachercoursesdata", handlers.GetTeacherCoursesData)
+	r.HandleFunc("/api/getcoursesdata", handlers.GetCoursesData)
+	r.HandleFunc("/api/getteachermarksdata", handlers.GetTeacherMarksData)
+	r.HandleFunc("/api/getmarksdata", handlers.GetMarksData)
+	r.HandleFunc("/api/gettestsdata", handlers.GetTestsData)
+	r.HandleFunc("/api/gettest", handlers.GetTest)
+	r.HandleFunc("/api/upload", handlers.HandleUploadFile)
 
-	http.HandleFunc("/api/admin/adduser", handlers.HandleAddUser)
-	http.HandleFunc("/api/admin/deleteuser", handlers.HandleDeleteUser)
-	http.HandleFunc("/api/admin/addgroup", handlers.HandleAddGroup)
-	http.HandleFunc("/api/admin/deletegroup", handlers.HandleDeleteGroup)
+	r.HandleFunc("/api/admin/adduser", handlers.HandleAddUser)
+	r.HandleFunc("/api/admin/deleteuser", handlers.HandleDeleteUser)
+	r.HandleFunc("/api/admin/addgroup", handlers.HandleAddGroup)
+	r.HandleFunc("/api/admin/deletegroup", handlers.HandleDeleteGroup)
 
-	http.HandleFunc("/api/admin/changeusergroup", handlers.HandleChangeUserGroup)
-	http.HandleFunc("/api/admin/changeuserrole", handlers.HandleChangeUserRole)
+	r.HandleFunc("/api/admin/changeusergroup", handlers.HandleChangeUserGroup)
+	r.HandleFunc("/api/admin/changeuserrole", handlers.HandleChangeUserRole)
 
 	// API tests-service
-	http.HandleFunc("/api/tests", handlers.CreateTest)
-	http.HandleFunc("/api/tests/get", handlers.GetTest)
-	http.HandleFunc("/api/tests/startattempt", handlers.StartAttempt)
+	r.HandleFunc("/api/tests", handlers.CreateTest)
+	r.HandleFunc("/api/tests/{id}", handlers.GetTest)
+	r.HandleFunc("/api/tests/startattempt", handlers.StartAttempt)
 
-	http.HandleFunc("/api/attempts/answer", handlers.SubmitAnswer)
-	http.HandleFunc("/api/attempts/finish", handlers.FinishAttempt)
+	r.HandleFunc("/api/attempts/answer", handlers.SubmitAnswer)
+	r.HandleFunc("/api/attempts/finish", handlers.FinishAttempt)
 
-	go func() {
-		<-ctx.Done()
-		s.Shutdown(ctx)
-	}()
-
-	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := http.ListenAndServe(":8080", r); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 

@@ -30,8 +30,8 @@ func NewTxRepository(tx *sql.Tx) *txRepository {
 	return &txRepository{tx: tx}
 }
 
-func (r *TestRepository) GetTestByID(ctx context.Context, id int) (*models.Test, error) {
-	query := `SELECT id, name, upload_date, end_date, duration, 
+func (r *TestRepository) GetTestByID(ctx context.Context, id string) (*models.Test, error) {
+	query := `SELECT id, name, upload_date, ends_date, duration, 
               attempts FROM tests WHERE id = $1`
 
 	var test models.Test
@@ -41,6 +41,7 @@ func (r *TestRepository) GetTestByID(ctx context.Context, id int) (*models.Test,
 	)
 
 	if err != nil {
+		fmt.Println("DB error" + err.Error())
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("test not found")
 		}
@@ -50,7 +51,7 @@ func (r *TestRepository) GetTestByID(ctx context.Context, id int) (*models.Test,
 	return &test, nil
 }
 
-func (r *TestRepository) GetTestQuestions(ctx context.Context, testID int) ([]models.Question, error) {
+func (r *TestRepository) GetTestQuestions(ctx context.Context, testID string) ([]models.Question, error) {
 	query := `SELECT id, test_id, question_text, question_type, points, position 
               FROM questions WHERE test_id = $1 ORDER BY position`
 
@@ -73,7 +74,7 @@ func (r *TestRepository) GetTestQuestions(ctx context.Context, testID int) ([]mo
 }
 
 func (r *TestRepository) GetQuestionOptions(ctx context.Context, questionID int) ([]models.AnswerOption, error) {
-	query := `SELECT id, question_id, option_text, is_correct, position 
+	query := `SELECT id, question_id, option_text, position 
               FROM answer_options WHERE question_id = $1 ORDER BY position`
 
 	rows, err := r.Db.QueryContext(ctx, query, questionID)
@@ -85,7 +86,7 @@ func (r *TestRepository) GetQuestionOptions(ctx context.Context, questionID int)
 	var options []models.AnswerOption
 	for rows.Next() {
 		var opt models.AnswerOption
-		if err := rows.Scan(&opt.ID, &opt.QuestionID, &opt.OptionText, &opt.IsCorrect, &opt.Position); err != nil {
+		if err := rows.Scan(&opt.ID, &opt.QuestionID, &opt.OptionText, &opt.Position); err != nil {
 			return nil, err
 		}
 		options = append(options, opt)

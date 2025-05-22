@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"strconv"
 	"time"
 )
 
@@ -18,14 +20,16 @@ func NewTestService(repo *repository.TestRepository) *TestService {
 	return &TestService{Repo: repo}
 }
 
-func (s *TestService) GetTest(ctx context.Context, testID int) (*models.Test, []models.Question, error) {
+func (s *TestService) GetTest(ctx context.Context, testID string) (*models.Test, []models.Question, error) {
 	test, err := s.Repo.GetTestByID(ctx, testID)
 	if err != nil {
+		log.Println("Ошибка получения теста по ID теста(файл test_service метод GetTest) " + err.Error())
 		return nil, nil, err
 	}
 
 	questions, err := s.Repo.GetTestQuestions(ctx, testID)
 	if err != nil {
+		log.Println("Ошибка получения вопросов по ID теста(файл test_service метод GetTest) " + err.Error())
 		return nil, nil, err
 	}
 
@@ -34,9 +38,18 @@ func (s *TestService) GetTest(ctx context.Context, testID int) (*models.Test, []
 		if questions[i].QuestionType == "single_choice" || questions[i].QuestionType == "multiple_choice" {
 			options, err := s.Repo.GetQuestionOptions(ctx, questions[i].ID)
 			if err != nil {
+				log.Println("Ошибка получения вариантов ответа по ID вопроса(файл test_service метод GetTest) " + err.Error())
 				return nil, nil, err
 			}
 			questions[i].Options = options
+		} else if questions[i].QuestionType == "text_answer" {
+			option := models.AnswerOption{
+				ID:         -1,
+				QuestionID: -1,
+				OptionText: "",
+				Position:   -1,
+			}
+			questions[i].Options = []models.AnswerOption{option}
 		}
 	}
 
@@ -76,7 +89,7 @@ func (s *TestService) SubmitAnswer(ctx context.Context, userID int, answer *mode
 
 func (s *TestService) evaluateAnswer(ctx context.Context, questionID int, answerData json.RawMessage) (int, error) {
 	// Получаем вопрос и его тип
-	questions, err := s.Repo.GetTestQuestions(ctx, questionID)
+	questions, err := s.Repo.GetTestQuestions(ctx, strconv.Itoa(questionID))
 	if err != nil || len(questions) == 0 {
 		return 0, fmt.Errorf("question not found")
 	}
@@ -139,7 +152,7 @@ func (s *TestService) evaluateAnswer(ctx context.Context, questionID int, answer
 		}
 		return 0, nil
 
-	case "text":
+	case "text_answer":
 		// TODO: сложная проверка
 
 		return 0, nil

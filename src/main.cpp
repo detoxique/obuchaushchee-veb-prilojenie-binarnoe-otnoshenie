@@ -253,6 +253,52 @@ struct TestsData {
     std::vector<Test> Tests;
 };
 
+struct AnswerOption {
+    int id;
+    int question_id;
+    std::string option_text;
+    int position;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AnswerOption, id, question_id, option_text, position)
+
+struct Question {
+    int id;
+    int test_id;
+    std::string question_text;
+    std::string question_type;
+    int points;
+    int position;
+    std::vector<AnswerOption> options;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Question, id, test_id, question_text, question_type, points, position, options)
+
+struct TestResponse {
+    Test test;
+    std::vector<Question> questions;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TestResponse, test, questions)
+
+struct SubmitSingle {
+    int selected_option_id;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitSingle, selected_option_id)
+
+struct SubmitMultiple {
+    std::vector<int> selected_option_ids;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitMultiple, selected_option_ids)
+
+struct SubmitText {
+    std::string text;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitText, text)
+
 // Функция для парсинга даты из строки
 bool parse_date(const std::string& date_str, std::tm& tm) {
     std::istringstream ss(date_str);
@@ -293,6 +339,7 @@ namespace nlohmann {
 void login();
 void exit();
 void getTestsData();
+void startTest();
 bool verifyToken(const std::string &str_token);
 std::string removeChar(std::string str, char ch);
 
@@ -301,6 +348,8 @@ tgui::EditBox::Ptr editBoxPassword;
 
 LocalStorage localStorage;
 TestsData tests_data;
+
+TestResponse response;
 
 int CurrentPage = 0, RealPage = 0;
 // 0 - авторизация
@@ -574,6 +623,7 @@ int main()
             startButton->setPosition({ 25, 100 });
             startButton->setSize({ 180, 25 });
             startButton->setTextSize(14);
+            startButton->onClick(startTest);
 
             tgui::Button::Ptr backButton = tgui::Button::create(u8"Вернуться");
             backButton->setPosition({ 25, 150 });
@@ -587,6 +637,75 @@ int main()
             gui.add(info);
             gui.add(startButton);
             gui.add(backButton);
+        }
+
+        if (CurrentPage == 3 && RealPage != 3) {
+            RealPage = 3;
+
+            gui.removeAllWidgets();
+            tgui::Label::Ptr label = tgui::Label::create(response.test.Title); // Заголовок теста
+            label->setPosition({ 25, 25 });
+            label->setTextSize(24);
+
+            int offset = 0;
+            for (int i = 0; i < response.questions.size(); i++) {
+                std::string additive_text;
+                if (response.questions[i].question_type == "single_choice")
+                    additive_text = u8" (Выберите один правильный ответ)";
+                else if (response.questions[i].question_type == "multiple_choice")
+                    additive_text = u8" (Выберите один или несколько правильных ответов)";
+                tgui::Label::Ptr questionLabel = tgui::Label::create(response.questions[i].question_text + additive_text); // Заголовок вопроса
+
+                questionLabel->setPosition({ 25, 70 + offset });
+                questionLabel->setTextSize(14);
+
+                gui.add(questionLabel);
+
+                offset += 30; // Добавляем смещение
+
+                if (response.questions[i].question_type == "single_choice") {
+                    for (int j = 0; j < response.questions[i].options.size(); j++) {
+                        tgui::RadioButton::Ptr choice = tgui::RadioButton::create(); // Выбор одного варианта
+
+                        choice->setPosition({ 30, 70 + offset });
+
+                        tgui::Label::Ptr choiceLabel = tgui::Label::create(response.questions[i].options[j].option_text);
+                        choiceLabel->setPosition({ 50, 70 + offset });
+                        choiceLabel->setTextSize(14);
+
+                        offset += 20;
+
+                        gui.add(choice);
+                        gui.add(choiceLabel);
+                    }
+                }
+                else if (response.questions[i].question_type == "multiple_choice") {
+                    for (int j = 0; j < response.questions[i].options.size(); j++) {
+                        tgui::CheckBox::Ptr choice = tgui::CheckBox::create(response.questions[i].options[j].option_text); // Выбор вариантов
+
+                        choice->setPosition({ 30, 70 + offset });
+
+                        offset += 20;
+
+                        gui.add(choice);
+                    }
+                }
+                else if (response.questions[i].question_type == "text_answer") {
+                    tgui::EditBox::Ptr textArea = tgui::EditBox::create();
+
+                    textArea->setPosition({ 30, 70 + offset });
+                    textArea->setSize({ 160, 20 });
+                    textArea->setTextSize(14);
+
+                    offset += 30;
+
+                    gui.add(textArea);
+                }
+
+                offset += 30;
+            }
+
+            gui.add(label);
         }
 
         window.clear(sf::Color(255, 255, 255, 255));
@@ -733,6 +852,41 @@ void getTestsData() {
 
 void getTestData(int selected_listview_item) {
     int id = tests_data.Tests[selected_listview_item].Id;
+
+    httplib::Client cli("localhost:8080");
+
+    // Выполнение GET-запроса
+    auto res = cli.Get("/api/tests/" + std::to_string(id));
+
+    if (res && res->status == 200) {
+        try {
+            // Парсинг JSON ответа
+            nlohmann::json j = nlohmann::json::parse(res->body);
+
+            // Конвертация JSON в структуры данных
+            response = j.get<TestResponse>();
+
+            // Пример работы с данными
+            std::cout << "Test title: " << response.test.Title << std::endl;
+            std::cout << "Questions count: " << response.questions.size() << std::endl;
+
+            // Сохранение в файл
+            std::ofstream output("test_data.json");
+            output << std::setw(4) << j << std::endl;
+            output.close();
+
+            std::cout << "Data saved to test_data.json" << std::endl;
+
+        }
+        catch (const std::exception& e) {
+            std::cout << res->body << std::endl;
+            std::cerr << "JSON parse error: " << e.what() << std::endl;
+        }
+    }
+    else {
+        std::cerr << "Request failed with status: "
+            << res->status << std::endl;
+    }
 }
 
 void startTest() {

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/models"
+	"github.com/gorilla/mux"
 )
 
 // Страница авторизации
@@ -990,7 +991,7 @@ func GetTestsData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Info("Ошибка при чтении тела ответа")
 	}
-	slog.Info(string(body))
+	//slog.Info(string(body))
 
 	// Отправляем JSON-ответ
 	w.Header().Set("Content-Type", "application/json")
@@ -1580,6 +1581,7 @@ func HandleChangeUserRole(w http.ResponseWriter, r *http.Request) {
 
 // Тесты
 func CreateTest(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на создание теста")
 	if r.Method != "POST" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
@@ -1663,7 +1665,10 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	slog.Info("Получен запрос на получение данных теста с ID " + id)
+	if r.Method != "GET" {
 		slog.Info("Метод не разрешен")
 		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
@@ -1672,7 +1677,7 @@ func GetTest(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Отправлен запрос на подтверждение токена")
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Get("http://localhost:1337/api/tests/{id}")
+	resp, err := http.Get("http://localhost:1337/api/tests/" + id)
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
