@@ -38,8 +38,10 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/courses", handlers.ServeCoursesPage)
 	r.HandleFunc("/notifications", handlers.ServeNotificationsPage)
 	r.HandleFunc("/createtest", handlers.ServeCreateTestPage)
+	r.HandleFunc("/course/{name}", handlers.ServeCoursePage)
+	r.HandleFunc("/view/{name}", handlers.ServeViewPage)
 
-	r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
 	// API
 	r.HandleFunc("/api/login", handlers.HandleLogin)
@@ -68,11 +70,13 @@ func Run(ctx context.Context) error {
 
 	// API tests-service
 	r.HandleFunc("/api/tests", handlers.CreateTest)
-	r.HandleFunc("/api/tests/{id}", handlers.GetTest)
+	r.HandleFunc("/api/tests/test/{id}", handlers.GetTest)
 	r.HandleFunc("/api/tests/startattempt", handlers.StartAttempt)
 
 	r.HandleFunc("/api/attempts/answer", handlers.SubmitAnswer)
 	r.HandleFunc("/api/attempts/finish", handlers.FinishAttempt)
+
+	http.Handle("/", r)
 
 	if err := http.ListenAndServe(":8080", r); err != nil && err != http.ErrServerClosed {
 		return err

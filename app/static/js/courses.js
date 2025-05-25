@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!token) {
         // Токена нет
         console.log("No token");
-        window.location.href = '/';
+        //window.location.href = '/';
         return;
     }
 
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             // Ошибка проверки токена
-            window.location.href = '/';
+            //window.location.href = '/';
         });
     });
 });

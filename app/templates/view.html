@@ -17,7 +17,7 @@
     </head>
     <body>
         
-        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <nav class="navbar fixed-top navbar-expand-lg bg-body-tertiary">
             <div class="container-fluid">
               <a class="navbar-brand" href="/profile">Образовательный портал</a>
               <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,11 +45,11 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="#">Дискретная математика</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Файл 1</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{.Name}}</li>
                 </ol>
             </nav>
 
-            <embed class="viewer" src="../static/pdf/REShENIE_ZADACh_PO_DM.pdf" type="application/pdf">
+            <embed class="viewer" src="../static/{{.Filename}}" type="application/pdf">
         </div>
 
         

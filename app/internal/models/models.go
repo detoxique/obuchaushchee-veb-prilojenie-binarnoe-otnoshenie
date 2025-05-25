@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+type Test struct {
+	ID         int       `json:"id"`
+	CourseID   int       `json:"id_course"`
+	Title      string    `json:"title"`
+	UploadDate time.Time `json:"upload_date"`
+	EndDate    time.Time `json:"end_date"`
+	Duration   int       `json:"duration"` // в секундах
+	Attempts   int       `json:"attempts"`
+}
+
 // Данные для входа
 type LoginData struct {
 	Username string `json:"username"`
@@ -28,8 +38,9 @@ type TokenResponse struct {
 }
 
 type ProfilePageData struct {
-	Username string `json:"Username"`
-	Group    string `json:"Group"`
+	Username string   `json:"Username"`
+	Group    string   `json:"Group"`
+	Courses  []Course `json:"Courses"`
 }
 
 type TeacherCoursesPageData struct {
@@ -47,6 +58,11 @@ type Course struct {
 type File struct {
 	Name       string    `json:"Name"`
 	UploadDate time.Time `json:"UploadDate"`
+	Filename   string    `json:"Filename"`
+}
+
+type ServeCoursePage struct {
+	Course Course `json:"course"`
 }
 
 type CoursesPageData struct {
@@ -110,16 +126,6 @@ type DeleteUserData struct {
 
 type DeleteUser struct {
 	Name string `json:"Username"`
-}
-
-// Тесты
-type Test struct {
-	Id         int       `json:"Id"`
-	Title      string    `json:"Title"`
-	UploadDate time.Time `json:"UploadDate"`
-	EndDate    time.Time `json:"EndDate"`
-	Duration   string    `json:"Duration"`
-	Attempts   int       `json:"Attempts"`
 }
 
 type TestsData struct {

@@ -86,7 +86,7 @@ func (h *TestHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	answerData := struct {
-		UserId int               `json:"user_id"`
+		Token  string            `json:"token"`
 		Answer models.UserAnswer `json:"answer"`
 	}{}
 
@@ -96,7 +96,16 @@ func (h *TestHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.SubmitAnswer(r.Context(), answerData.UserId, &answerData.Answer); err != nil {
+	username := service.GetUsernameGromToken(answerData.Token)
+
+	var UserID int
+	err = h.service.Repo.Db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&UserID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.service.SubmitAnswer(r.Context(), UserID, &answerData.Answer); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -106,8 +115,8 @@ func (h *TestHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 
 func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
 	answerData := struct {
-		UserId    int `json:"user_id"`
-		AttemptId int `json:"attempt_id"`
+		Token  string `json:"token"`
+		TestID int    `json:"test_id"`
 	}{}
 
 	err := json.NewDecoder(r.Body).Decode(&answerData)
@@ -116,7 +125,23 @@ func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attempt, err := h.service.FinishAttempt(r.Context(), answerData.UserId, answerData.AttemptId)
+	username := service.GetUsernameGromToken(answerData.Token)
+
+	var UserID int
+	err = h.service.Repo.Db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&UserID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var AttemptId int
+	err = h.service.Repo.Db.QueryRow("SELECT id FROM test_attempts WHERE user_id = $1 AND status = 'in_progress'", UserID).Scan(&AttemptId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	attempt, err := h.service.FinishAttempt(r.Context(), UserID, AttemptId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

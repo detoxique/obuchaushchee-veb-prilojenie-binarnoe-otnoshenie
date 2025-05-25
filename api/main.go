@@ -7,6 +7,7 @@ import (
 	"api/internal/service"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -300,7 +301,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Получаем данные для пользователя: " + username)
 
 	// Получение данных из БД
-	var role, group string
+	var role, group, id_group string
 	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
@@ -314,7 +315,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	err = Db.QueryRow("SELECT groups.name FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group)
+	err = Db.QueryRow("SELECT groups.name, groups.id FROM groups, users WHERE users.username = $1 AND users.id_group = groups.id", username).Scan(&group, &id_group)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -327,9 +328,17 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
+	courses, err := GetUserCourses(Db, username)
+	if err != nil {
+		log.Println("Внутренняя ошибка")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
 	data := models.ProfilePageData{
 		Username: username,
 		Group:    group,
+		Courses:  courses,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -344,6 +353,174 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
+}
+
+func GetUserCourses(db *sql.DB, username string) ([]models.Course, error) {
+	groupID, err := GetUserGroupID(db, username)
+	if err != nil {
+		return nil, fmt.Errorf("error getting user group: %v", err)
+	}
+
+	courseIDs, err := GetUserCourseIDs(db, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting course IDs: %v", err)
+	}
+
+	if len(courseIDs) == 0 {
+		return []models.Course{}, nil
+	}
+
+	courses, err := getCourses(db, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	filesMap, err := getFilesMap(db, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	testsMap, err := getTestsMap(db, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range courses {
+		courseID := courses[i].Id
+		courses[i].Files = getFromMap(filesMap, courseID)
+		courses[i].Tests = getFromMap(testsMap, courseID)
+	}
+
+	return courses, nil
+}
+
+func GetUserGroupID(db *sql.DB, username string) (int, error) {
+	var groupID sql.NullInt64
+	err := db.QueryRow("SELECT id_group FROM users WHERE username = $1", username).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("user not found")
+		}
+		return 0, err
+	}
+	if !groupID.Valid {
+		return 0, nil
+	}
+	return int(groupID.Int64), nil
+}
+
+func GetUserCourseIDs(db *sql.DB, groupID int) ([]int, error) {
+	if groupID == 0 {
+		return []int{}, nil
+	}
+
+	rows, err := db.Query("SELECT id_course FROM groups_courses WHERE id_group = $1", groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var courseIDs []int
+	for rows.Next() {
+		var courseID int
+		if err := rows.Scan(&courseID); err != nil {
+			return nil, err
+		}
+		courseIDs = append(courseIDs, courseID)
+	}
+	return courseIDs, rows.Err()
+}
+
+func getCourses(db *sql.DB, courseIDs []int) ([]models.Course, error) {
+	if len(courseIDs) == 0 {
+		return []models.Course{}, nil
+	}
+
+	rows, err := db.Query("SELECT id, name FROM courses WHERE id = ANY($1)", pq.Array(courseIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var courses []models.Course
+	for rows.Next() {
+		var c models.Course
+		if err := rows.Scan(&c.Id, &c.Name); err != nil {
+			return nil, err
+		}
+		c.Files = []models.File{}
+		c.Tests = []models.Test{}
+		courses = append(courses, c)
+	}
+	return courses, rows.Err()
+}
+
+func getFilesMap(db *sql.DB, courseIDs []int) (map[int][]models.File, error) {
+	filesMap := make(map[int][]models.File)
+	if len(courseIDs) == 0 {
+		return filesMap, nil
+	}
+
+	rows, err := db.Query(`
+        SELECT id_course, name, filename, upload_date 
+        FROM files 
+        WHERE id_course = ANY($1)
+    `, pq.Array(courseIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f models.File
+		var courseID int
+		if err := rows.Scan(&courseID, &f.Name, &f.Filename, &f.UploadDate); err != nil {
+			return nil, err
+		}
+		filesMap[courseID] = append(filesMap[courseID], f)
+	}
+	return filesMap, rows.Err()
+}
+
+func getTestsMap(db *sql.DB, courseIDs []int) (map[int][]models.Test, error) {
+	testsMap := make(map[int][]models.Test)
+	if len(courseIDs) == 0 {
+		return testsMap, nil
+	}
+
+	rows, err := db.Query(`
+        SELECT id, name, id_course, upload_date, ends_date, duration, attempts 
+        FROM tests 
+        WHERE id_course = ANY($1)
+    `, pq.Array(courseIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t models.Test
+		if err := rows.Scan(
+			&t.ID,
+			&t.Title,
+			&t.CourseID,
+			&t.UploadDate,
+			&t.EndDate,
+			&t.Duration,
+			&t.Attempts,
+		); err != nil {
+			return nil, err
+		}
+		testsMap[t.CourseID] = append(testsMap[t.CourseID], t)
+	}
+	return testsMap, rows.Err()
+}
+
+func getFromMap[T any](m map[int][]T, key int) []T {
+	if val, ok := m[key]; ok {
+		return val
+	}
+	return []T{}
 }
 
 // Получение данных профиля по токену
@@ -612,7 +789,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Роль пользователя " + username + ": " + role)
 
-	var data models.TeacherCoursesPageData
+	var data models.CoursesPageData
 
 	// Получение количества курсов в БД
 	var coursesCount int
@@ -630,7 +807,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
 
 	// Считывание курсов из БД
-	courses := make([]models.Course, coursesCount)
+	courses := make([]string, coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
@@ -645,7 +822,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println(name)
-		courses[i-1] = models.Course{Id: id, Name: name}
+		courses[i-1] = name
 	}
 
 	data.Courses = courses
@@ -897,6 +1074,129 @@ func getTestsData(w http.ResponseWriter, r *http.Request) {
 	// 	// Отправляем JSON-ответ
 	// 	w.WriteHeader(http.StatusOK)
 	// 	json.NewEncoder(w).Encode(jsonData)
+}
+
+func getCourseData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	name := vars["name"]
+
+	var courseID string
+	err := Db.QueryRow("SELECT id FROM courses WHERE name = $1", name).Scan(&courseID)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var filesCount int
+	err = Db.QueryRow("SELECT COUNT(*) FROM files WHERE id_course = $1", courseID).Scan(&filesCount)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	files := make([]models.File, filesCount)
+	for i := 1; i <= filesCount; i++ {
+		var name string
+		var upload_time time.Time
+		var filename string
+		err = Db.QueryRow("SELECT name, upload_date, filename FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM files WHERE id_course = $1) AS subquery WHERE row_num = $2", courseID, i).Scan(&name, &upload_time, &filename)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		files[i-1] = models.File{Name: name, Filename: filename, UploadDate: upload_time}
+	}
+
+	var testsCount int
+	err = Db.QueryRow("SELECT COUNT(*) FROM tests WHERE id_course = $1", courseID).Scan(&filesCount)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tests := make([]models.Test, testsCount)
+	for i := 1; i <= testsCount; i++ {
+		var title string
+		var EndDate time.Time
+		err = Db.QueryRow("SELECT name, ends_date FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM tests WHERE id_course = $1) AS subquery WHERE row_num = $2", courseID, i).Scan(&title, &EndDate)
+		if err == sql.ErrNoRows {
+			log.Println("Неправильные данные")
+			sendError(w, "Неправильные данные", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tests[i-1] = models.Test{Title: title, EndDate: EndDate}
+	}
+	course := models.Course{
+		Files: files,
+		Tests: tests,
+	}
+
+	data := models.ServeCoursePage{
+		Course: course,
+	}
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
+}
+
+func getViewData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	name := vars["name"]
+
+	var filename string
+	err := Db.QueryRow("SELECT filename FROM files WHERE name = $1", name).Scan(&filename)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Отправляем JSON-ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(filename)
 }
 
 // Добавление пользователя через админ панель
@@ -1158,6 +1458,8 @@ func main() {
 	r.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
 	r.HandleFunc("/api/getcoursesdata", getCoursesData)
 	r.HandleFunc("/api/gettestsdata", getTestsData)
+	r.HandleFunc("/api/getcoursedata/{name}", getCourseData)
+	r.HandleFunc("/api/getviewdata/{name}", getViewData)
 
 	r.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	r.HandleFunc("/api/admin/adduser", addUser)
@@ -1167,7 +1469,7 @@ func main() {
 
 	// API tests-service
 	r.HandleFunc("/api/tests/", testHandler.CreateTest)
-	r.HandleFunc("/api/tests/{id}", testHandler.GetTest)
+	r.HandleFunc("/api/tests/test/{id}", testHandler.GetTest)
 	r.HandleFunc("/api/tests/attempts", testHandler.StartAttempt)
 
 	r.HandleFunc("/api/attempts/answers", testHandler.SubmitAnswer)

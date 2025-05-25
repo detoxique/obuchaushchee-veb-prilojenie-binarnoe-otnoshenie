@@ -127,6 +127,7 @@ button[type="exitbutton"]{
     display: flex;
     margin-top: 12px;
     overflow-x: auto;
+    
 }
 
 .card-2 {

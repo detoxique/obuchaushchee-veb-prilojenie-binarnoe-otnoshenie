@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/models"
 	"github.com/gorilla/mux"
@@ -409,9 +410,64 @@ func GetProfileData(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(respData.Body).Decode(&profileData)
 	if err != nil {
-		slog.Info("Не удалось считать данные профиля")
+		slog.Info("Не удалось считать данные профиля " + err.Error())
 		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
+	}
+
+	var tests, courses_cards string
+	for i := 0; i < len(profileData.Courses); i++ {
+		// Самый поздний тест
+		var date time.Time
+		for j := 0; j < len(profileData.Courses[i].Tests); j++ {
+			if profileData.Courses[i].Tests[j].EndDate.Compare(date) > 0 {
+				date = profileData.Courses[i].Tests[j].EndDate
+			}
+		}
+		if len(profileData.Courses[i].Tests)%10 == 0 {
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02/01/2006") + `!</h4></li>`
+		} else if len(profileData.Courses[i].Tests)%10 == 1 {
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тест до ` + date.Format("02/01/2006") + `!</h4></li>`
+		} else if len(profileData.Courses[i].Tests)%10 > 1 && len(profileData.Courses[i].Tests)%10 < 5 {
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` теста до ` + date.Format("02/01/2006") + `!</h4></li>`
+		} else {
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02/01/2006") + `!</h4></li>`
+		}
+
+		if i > 0 {
+			courses_cards += `<div class="card-2">
+                        <div class="card" style="width: 18rem;">
+                            <div class="card-body">
+                              <h5 class="card-title">` + profileData.Courses[i].Name + `</h5>
+                              <h6 class="card-subtitle mb-2 text-body-secondary">Тестов: ` + strconv.Itoa(len(profileData.Courses[i].Tests)) + `</h6>
+                              <p class="card-text"></p><a href="/course/` + profileData.Courses[i].Name + `" class="card-link">Перейти к курсу.</a>
+                            </div>
+                        </div>
+                    </div>`
+		} else {
+			courses_cards += `<div class="card-1">
+                        <div class="card" style="width: 18rem;">
+                            <div class="card-body">
+                              <h5 class="card-title">` + profileData.Courses[i].Name + `</h5>
+                              <h6 class="card-subtitle mb-2 text-body-secondary">Тестов: ` + strconv.Itoa(len(profileData.Courses[i].Tests)) + `</h6>
+                              <p class="card-text"></p><a href="/course/` + profileData.Courses[i].Name + `" class="card-link">Перейти к курсу.</a>
+                            </div>
+                        </div>
+                    </div>`
+		}
+
+	}
+
+	profileHTML := struct {
+		Username     template.HTML `json:"Username"`
+		Group        template.HTML `json:"Group"`
+		TestsList    template.HTML `json:"TestsList"`
+		CoursesCards template.HTML `json:"CoursesCards"`
+	}{
+		Username:     template.HTML(profileData.Username),
+		Group:        template.HTML(profileData.Group),
+		TestsList:    template.HTML(tests),
+		CoursesCards: template.HTML(courses_cards),
 	}
 
 	// Отправление страницы пользователю
@@ -423,7 +479,7 @@ func GetProfileData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.Execute(w, profileData)
+	tmpl.Execute(w, profileHTML)
 }
 
 // Получение страницы профиля с данными
@@ -777,7 +833,7 @@ func GetCoursesData(w http.ResponseWriter, r *http.Request) {
 	coursesHTML := `<ul class="courses-list">`
 
 	for i := 0; i < len(coursesData.Courses); i++ {
-		coursesHTML += `<li><a href="#">` + coursesData.Courses[i] + `</a><br><h4>1 Тест до 01.02.2025!</h4></li>`
+		coursesHTML += `<li><a href="/course/` + coursesData.Courses[i] + `">` + coursesData.Courses[i] + `</a><br><h4>1 Тест до 01.02.2025!</h4></li>`
 	}
 
 	coursesHTML += `</ul>`
@@ -997,6 +1053,94 @@ func GetTestsData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
+}
+
+func ServeCoursePage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name := vars["name"]
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Get("http://localhost:1337/api/getcoursedata/" + name)
+	if err != nil {
+		slog.Info("Ошибка получения данных тестов http")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	var pageData models.ServeCoursePage
+
+	err = json.NewDecoder(resp.Body).Decode(&pageData)
+	if err != nil {
+		slog.Info("Не удалось считать данные профиля" + err.Error())
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	var filesHTML string
+	for i := 0; i < len(pageData.Course.Files); i++ {
+		filesHTML += `<li><a href="/view/` + pageData.Course.Files[i].Name + `">` + pageData.Course.Files[i].Name + `</a><br><h4>Загружено: ` + pageData.Course.Files[i].UploadDate.String() + `</h4></li>`
+	}
+
+	var testsHTML string
+	for i := 0; i < len(pageData.Course.Tests); i++ {
+		testsHTML += `<li><a href="#">` + pageData.Course.Tests[i].Title + `</a><br><h4>Должен быть выполнен до: ` + pageData.Course.Tests[i].EndDate.String() + `</h4></li>`
+	}
+
+	data := struct {
+		CourseName template.HTML `json:"CourseName"`
+		Files      template.HTML `json:"Files"`
+		Tests      template.HTML `json:"Tests"`
+	}{
+		CourseName: template.HTML(pageData.Course.Name),
+		Files:      template.HTML(filesHTML),
+		Tests:      template.HTML(testsHTML),
+	}
+
+	tmpl, err := template.ParseFiles("templates/course.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, data)
+}
+
+func ServeViewPage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name := vars["name"]
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Get("http://localhost:1337/api/getviewdata/" + name)
+	if err != nil {
+		slog.Info("Ошибка получения данных тестов http")
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	var filename string
+
+	err = json.NewDecoder(resp.Body).Decode(&filename)
+	if err != nil {
+		slog.Info("Не удалось считать данные профиля" + err.Error())
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	data := struct {
+		Name     template.HTML `json:"Name"`
+		Filename template.HTML `json:"Filename"`
+	}{
+		Name:     template.HTML(name),
+		Filename: template.HTML(filename),
+	}
+
+	tmpl, err := template.ParseFiles("templates/view.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, data)
 }
 
 // Авторизация
@@ -1677,7 +1821,7 @@ func GetTest(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Отправлен запрос на подтверждение токена")
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Get("http://localhost:1337/api/tests/" + id)
+	resp, err := http.Get("http://localhost:1337/api/tests/test/" + id)
 	if err != nil {
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return

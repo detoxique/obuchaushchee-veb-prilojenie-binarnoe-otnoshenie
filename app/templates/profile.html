@@ -66,9 +66,7 @@
                 <hr>
 
                 <ul class="course-list">
-                    <li><a href="#">Дискретная математика</a><br><h4>1 Тест до 01.02.2025!</h4></li>
-                    <li><a href="#">Теория вероятностей и математическая статистика</a><br><h4>2 Теста до 06.02.2025!</h4></li>
-                    <li><a href="#">Высшая математика</a><br><h4>3 Теста до 06.02.2025!</h4></li>
+                    {{ .TestsList }}
                 </ul>
                 
             </div>
@@ -77,38 +75,8 @@
                 <h2>Последние курсы</h2>
 
                 <div class="cards">
-                    <div class="card-1">
-                        <div class="card" style="width: 18rem;">
-                            <div class="card-body">
-                              <h5 class="card-title">Дискретная математика</h5>
-                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 06.05.2025</h6>
-                              <p class="card-text">Описание курса.</p>
-                              <a href="#" class="card-link">Перейти к курсу.</a>
-                            </div>
-                        </div>
-                    </div>
-    
-                    <div class="card-2">
-                        <div class="card" style="width: 18rem;">
-                            <div class="card-body">
-                              <h5 class="card-title">Высшая математика</h5>
-                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 02.05.2025</h6>
-                              <p class="card-text">Описание курса.</p>
-                              <a href="#" class="card-link">Перейти к курсу.</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-2">
-                        <div class="card" style="width: 18rem;">
-                            <div class="card-body">
-                              <h5 class="card-title">Теория вероятностей и математическая статистика</h5>
-                              <h6 class="card-subtitle mb-2 text-body-secondary">Добавлено: 14.04.2025</h6>
-                              <p class="card-text">Описание курса.</p>
-                              <a href="#" class="card-link">Перейти к курсу.</a>
-                            </div>
-                        </div>
-                    </div>
+                    {{ .CoursesCards }}
+                    
                 </div>
             </div>
 

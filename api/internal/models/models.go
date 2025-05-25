@@ -38,8 +38,9 @@ type Mark struct {
 
 // Данные страницы профиля
 type ProfilePageData struct {
-	Username string `json:"Username"`
-	Group    string `json:"Group"`
+	Username string   `json:"Username"`
+	Group    string   `json:"Group"`
+	Courses  []Course `json:"Courses"`
 }
 
 type Course struct {
@@ -52,6 +53,11 @@ type Course struct {
 type File struct {
 	Name       string    `json:"Name"`
 	UploadDate time.Time `json:"UploadDate"`
+	Filename   string    `json:"Filename"`
+}
+
+type ServeCoursePage struct {
+	Course Course `json:"course"`
 }
 
 type TeacherCoursesPageData struct {

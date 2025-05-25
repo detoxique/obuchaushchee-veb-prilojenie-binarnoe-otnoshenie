@@ -161,6 +161,8 @@ bool enable_network_interface() {
 }
 
 class LocalStorage {
+private:
+    std::string acc_token = "";
 public:
     bool SetTokens(std::string access_token, std::string refresh_token) {
         // Открытие файла для записи
@@ -171,6 +173,8 @@ public:
             std::cerr << "Ошибка открытия файла!" << std::endl;
             return 1;
         }
+
+        acc_token = access_token;
 
         // Запись строки в файл
         out_file << "access_token: " << access_token << std::endl;
@@ -204,6 +208,9 @@ public:
     }
 
     std::string GetAccessToken() {
+        if (acc_token != "")
+            return acc_token;
+
         std::ifstream in("localStorage.txt");
 
         // Проверка, открыт ли файл
@@ -216,7 +223,8 @@ public:
         while (std::getline(in, line)) {
             if (line.find("access_token: ") == 0) {
                 in.close();
-                return line.substr(14); // Удаляем "access_token: " (14 символов)
+                acc_token = line.substr(14);
+                return acc_token; // Удаляем "access_token: " (14 символов)
             }
         }
     }
@@ -281,23 +289,19 @@ struct TestResponse {
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TestResponse, test, questions)
 
-struct SubmitSingle {
-    int selected_option_id;
+struct UserAnswer {
+    int question_id;
+    nlohmann::json answer_data;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitSingle, selected_option_id)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserAnswer, question_id, answer_data)
 
-struct SubmitMultiple {
-    std::vector<int> selected_option_ids;
+struct SubmitAnswer {
+    std::string token;
+    UserAnswer answer;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitMultiple, selected_option_ids)
-
-struct SubmitText {
-    std::string text;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitText, text)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitAnswer, token, answer)
 
 // Функция для парсинга даты из строки
 bool parse_date(const std::string& date_str, std::tm& tm) {
@@ -340,11 +344,17 @@ void login();
 void exit();
 void getTestsData();
 void startTest();
+void sendAnswers();
 bool verifyToken(const std::string &str_token);
 std::string removeChar(std::string str, char ch);
+bool getRadioButtonState(tgui::ScrollablePanel::Ptr panel, const tgui::String& name);
+bool getCheckBoxState(tgui::ScrollablePanel::Ptr panel, const tgui::String& name);
+void showDialog();
 
 tgui::EditBox::Ptr editBoxLogin;
 tgui::EditBox::Ptr editBoxPassword;
+
+tgui::ScrollablePanel::Ptr scrollPanel;
 
 LocalStorage localStorage;
 TestsData tests_data;
@@ -357,7 +367,7 @@ int CurrentPage = 0, RealPage = 0;
 // 2 - информация о тесте
 // 3 - тест
 
-bool authorized = 0, got_tests_data = 0;
+bool authorized = 0, got_tests_data = 0, test_started = false, show_dialog = false, dialog_shown = false, got_questions = false;
 int listViewElement = -1;
 
 int main()
@@ -433,7 +443,7 @@ int main()
             CurrentPage = 2;
             });
 
-        tgui::Button::Ptr disableButton = tgui::Button::create(u8"Выключить сетевой драйвер");
+        /*tgui::Button::Ptr disableButton = tgui::Button::create(u8"Выключить сетевой драйвер");
         disableButton->setPosition({ 500, 600 });
         disableButton->setSize({ 220, 25 });
         disableButton->setTextSize(14);
@@ -443,12 +453,12 @@ int main()
         enableButton->setPosition({ 500, 650 });
         enableButton->setSize({ 220, 25 });
         enableButton->setTextSize(14);
-        enableButton->onClick(enable_network_interface);
+        enableButton->onClick(enable_network_interface);*/
 
         gui.add(startButton, "startButton");
 
-        gui.add(disableButton);
-        gui.add(enableButton);
+        /*gui.add(disableButton);
+        gui.add(enableButton);*/
 
         gui.add(listView, "tests");
         gui.add(label);
@@ -479,7 +489,7 @@ int main()
         button->setTextSize(14);
         button->onClick(login);
 
-        tgui::Button::Ptr disable = tgui::Button::create(u8"Отключить сетевой драйвер");
+        /*tgui::Button::Ptr disable = tgui::Button::create(u8"Отключить сетевой драйвер");
         disable->setPosition({ 25, 25 });
         disable->setSize({ 210, 25 });
         disable->setTextSize(14);
@@ -492,7 +502,7 @@ int main()
         enable->onClick(enable_network_interface);
 
         gui.add(disable);
-        gui.add(enable);
+        gui.add(enable);*/
 
         gui.add(label);
         gui.add(button);
@@ -517,6 +527,36 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
         }
+
+        // Модальное окно
+        tgui::ChildWindow::Ptr dialog = tgui::ChildWindow::create();
+        dialog->setTitle(u8"Предупреждение");
+        dialog->setSize(400, 150);
+        dialog->setPosition("50%", "50%");
+        dialog->setOrigin(0.5f, 0.5f);
+        dialog->setPositionLocked(true);
+        dialog->setResizable(false);
+
+        // Поле ввода
+        auto labelAttention = tgui::Label::create(u8"Вы действительно хотите завершить тестирование?");
+        labelAttention->setPosition("10%", "20%");
+        dialog->add(labelAttention);
+
+        // Кнопки
+        auto btnOk = tgui::Button::create(u8"Да");
+        btnOk->setSize(80, 30);
+        btnOk->setPosition("50% - 90", "70%");
+        btnOk->onPress([dialog] {
+            sendAnswers();
+            dialog->close();
+            });
+        dialog->add(btnOk);
+
+        auto btnCancel = tgui::Button::create(u8"Отмена");
+        btnCancel->setSize(80, 30);
+        btnCancel->setPosition("50% + 10", "70%");
+        btnCancel->onPress([dialog] { show_dialog = false; dialog_shown = false; dialog->close(); });
+        dialog->add(btnCancel);
 
         if (CurrentPage == 0 && RealPage != 0) {
             RealPage = 0;
@@ -647,6 +687,13 @@ int main()
             label->setPosition({ 25, 25 });
             label->setTextSize(24);
 
+            scrollPanel = tgui::ScrollablePanel::create();
+            scrollPanel->setSize(1230, 600); // Размер области
+            scrollPanel->setPosition(25, 70); // Позиция на экране
+            scrollPanel->getRenderer()->setBackgroundColor(tgui::Color(240, 240, 240)); // Фон
+
+            gui.add(scrollPanel);
+
             int offset = 0;
             for (int i = 0; i < response.questions.size(); i++) {
                 std::string additive_text;
@@ -656,56 +703,78 @@ int main()
                     additive_text = u8" (Выберите один или несколько правильных ответов)";
                 tgui::Label::Ptr questionLabel = tgui::Label::create(response.questions[i].question_text + additive_text); // Заголовок вопроса
 
-                questionLabel->setPosition({ 25, 70 + offset });
+                questionLabel->setPosition({ 25, 30 + offset });
                 questionLabel->setTextSize(14);
 
-                gui.add(questionLabel);
+                scrollPanel->add(questionLabel);
 
                 offset += 30; // Добавляем смещение
 
                 if (response.questions[i].question_type == "single_choice") {
+                    tgui::RadioButtonGroup radioGroup;
+
                     for (int j = 0; j < response.questions[i].options.size(); j++) {
                         tgui::RadioButton::Ptr choice = tgui::RadioButton::create(); // Выбор одного варианта
 
-                        choice->setPosition({ 30, 70 + offset });
+                        choice->setPosition({ 30, 30 + offset });
 
                         tgui::Label::Ptr choiceLabel = tgui::Label::create(response.questions[i].options[j].option_text);
-                        choiceLabel->setPosition({ 50, 70 + offset });
+                        choiceLabel->setPosition({ 50, 30 + offset });
                         choiceLabel->setTextSize(14);
 
                         offset += 20;
 
-                        gui.add(choice);
-                        gui.add(choiceLabel);
+                        scrollPanel->add(choice, std::to_string(response.questions[i].id) + "/" + std::to_string(response.questions[i].options[j].id));
+                        scrollPanel->add(choiceLabel);
                     }
                 }
                 else if (response.questions[i].question_type == "multiple_choice") {
                     for (int j = 0; j < response.questions[i].options.size(); j++) {
                         tgui::CheckBox::Ptr choice = tgui::CheckBox::create(response.questions[i].options[j].option_text); // Выбор вариантов
 
-                        choice->setPosition({ 30, 70 + offset });
+                        choice->setPosition({ 30, 30 + offset });
 
                         offset += 20;
 
-                        gui.add(choice);
+                        scrollPanel->add(choice, std::to_string(response.questions[i].id) + "/" + std::to_string(response.questions[i].options[j].id));
                     }
                 }
                 else if (response.questions[i].question_type == "text_answer") {
                     tgui::EditBox::Ptr textArea = tgui::EditBox::create();
 
-                    textArea->setPosition({ 30, 70 + offset });
+                    textArea->setPosition({ 30, 30 + offset });
                     textArea->setSize({ 160, 20 });
                     textArea->setTextSize(14);
 
                     offset += 30;
 
-                    gui.add(textArea);
+                    scrollPanel->add(textArea, std::to_string(response.questions[i].id));
                 }
 
                 offset += 30;
             }
 
             gui.add(label);
+
+            // Кнопка Завершить тестирование
+
+            tgui::Button::Ptr endButton = tgui::Button::create(u8"Завершить тестирование");
+            endButton->setPosition({ 25, 680 });
+            endButton->setSize({ 200, 25 });
+
+            
+
+            endButton->onClick([dialog] {
+                showDialog();
+                });
+            
+
+            gui.add(endButton);
+        }
+
+        if (show_dialog && !dialog_shown) {
+            gui.add(dialog);
+            dialog_shown = true;
         }
 
         window.clear(sf::Color(255, 255, 255, 255));
@@ -714,6 +783,44 @@ int main()
 
         window.display();
     }
+}
+
+void showDialog() {
+    show_dialog = true;
+}
+
+bool getRadioButtonState(tgui::ScrollablePanel::Ptr panel, const std::string& name)
+{
+    // Получаем виджет по имени из панели
+    tgui::Widget::Ptr widget = panel->get(name);
+
+    if (!widget)
+        throw std::runtime_error("Widget '" + name + "' not found!");
+
+    // Пробуем преобразовать к RadioButton
+    auto radioButton = widget->cast<tgui::RadioButton>();
+
+    if (!radioButton)
+        throw std::runtime_error("Widget '" + name + "' is not a RadioButton!");
+
+    return radioButton->isChecked();
+}
+
+bool getCheckBoxState(tgui::ScrollablePanel::Ptr panel, const std::string& name)
+{
+    // Получаем виджет по имени из панели
+    tgui::Widget::Ptr widget = panel->get(name);
+
+    if (!widget)
+        throw std::runtime_error("Widget '" + name + "' not found!");
+
+    // Пробуем преобразовать к RadioButton
+    auto checkBox = widget->cast<tgui::CheckBox>();
+
+    if (!checkBox)
+        throw std::runtime_error("Widget '" + name + "' is not a RadioButton!");
+
+    return checkBox->isChecked();
 }
 
 static bool validate() {
@@ -856,7 +963,7 @@ void getTestData(int selected_listview_item) {
     httplib::Client cli("localhost:8080");
 
     // Выполнение GET-запроса
-    auto res = cli.Get("/api/tests/" + std::to_string(id));
+    auto res = cli.Get("/api/tests/test/" + std::to_string(id));
 
     if (res && res->status == 200) {
         try {
@@ -876,6 +983,7 @@ void getTestData(int selected_listview_item) {
             output.close();
 
             std::cout << "Data saved to test_data.json" << std::endl;
+            got_questions = true;
 
         }
         catch (const std::exception& e) {
@@ -886,11 +994,119 @@ void getTestData(int selected_listview_item) {
     else {
         std::cerr << "Request failed with status: "
             << res->status << std::endl;
+        got_questions = false;
     }
 }
 
-void startTest() {
-    CurrentPage = 3;
-    getTestData(listViewElement);
+int findQuestionId(const std::string& element_name) {
+    size_t slash_pos = element_name.find('/');
+    if (slash_pos == std::string::npos) {
+        return 0;
+    }
+    return std::stoi(element_name.substr(0, slash_pos));
+}
 
+int findChoiceId(const std::string& element_name) {
+    size_t slash_pos = element_name.find('/');
+    if (slash_pos == std::string::npos) {
+        return 0;
+    }
+    return std::stoi(element_name.substr(slash_pos + 1));
+}
+
+void startTest() {
+    getTestData(listViewElement);
+    
+    if (got_questions) {
+        test_started = true;
+        CurrentPage = 3;
+
+        // Начинаем попытку
+        httplib::Client cli("localhost:8080");
+
+        // POST-запрос с JSON
+        httplib::Headers headers = {
+            {"Content-Type", "application/json"}
+        };
+        std::string body = R"({"id": ")" + std::to_string(listViewElement) + R"(", "token": ")" + localStorage.GetAccessToken() + R"("})";
+
+        auto post_res = cli.Post("/api/tests/startattempt", headers, body, "application/json");
+        if (post_res && post_res->status == 200) {
+            test_started = true;
+            CurrentPage = 3;
+        }
+        else {
+            test_started = false;
+        }
+    }
+}
+
+void sendAnswers() {
+    // Отправление ответов
+    httplib::Client cli("localhost:8080");
+
+    // POST-запрос с JSON
+    httplib::Headers headers = {
+        {"Content-Type", "application/json"}
+    };
+
+    for (int i = 0; i < response.questions.size(); i++) {
+        nlohmann::json answer_json;
+        if (response.questions[i].question_type == "single_choice") {
+            int opt_id = 0;
+            for (int j = 0; j < response.questions[i].options.size(); j++) {
+                if (getRadioButtonState(scrollPanel, std::to_string(response.questions[i].id) + "/" + std::to_string(response.questions[i].options[j].id))) {
+                    opt_id = response.questions[i].options[j].id;
+                }
+            }
+            answer_json["selected_option_id"] = opt_id;
+        }
+        else if (response.questions[i].question_type == "multiple_choice") {
+            std::vector<int> opt_ids;
+            for (int j = 0; j < response.questions[i].options.size(); j++) {
+                if (getCheckBoxState(scrollPanel, std::to_string(response.questions[i].id) + "/" + std::to_string(response.questions[i].options[j].id))) {
+                    opt_ids.push_back(response.questions[i].options[j].id);
+                }
+            }
+            answer_json["selected_option_ids"] = opt_ids;
+        }
+        else if (response.questions[i].question_type == "text_answer") {
+            std::string text;
+
+            tgui::Widget::Ptr widget = scrollPanel->get(std::to_string(response.questions[i].id));
+
+            auto textfield = widget->cast<tgui::EditBox>();
+
+            if (textfield)
+                text = textfield->getText().toStdString();
+            answer_json["answer_text"] = text;
+        }
+        UserAnswer answer{ response.questions[i].id, answer_json };
+        SubmitAnswer data{ localStorage.GetAccessToken(), answer };
+        nlohmann::json j = data;
+
+        std::cout << j.dump() << std::endl;
+
+        auto post_res = cli.Post("/api/attempts/answer", headers, j.dump(), "application/json");
+        if (post_res && post_res->status == 200) {
+            std::cout << "Ответ успешно отправлен." << std::endl;
+        }
+        else {
+            std::cout << "Ошибка при отправке ответа." << std::endl;
+        }
+    }
+
+    nlohmann::json j;
+    j["token"] = localStorage.GetAccessToken();
+    j["test_id"] = tests_data.Tests[listViewElement].Id;
+
+    auto post_res = cli.Post("/api/attempts/finish", headers, j.dump(), "application/json");
+    if (post_res && post_res->status == 200) {
+        std::cout << "Попытка успешно завершена." << std::endl;
+    }
+    else {
+        std::cout << "Ошибка при завершении попытки." << std::endl;
+    }
+
+    CurrentPage = 1;
 }
