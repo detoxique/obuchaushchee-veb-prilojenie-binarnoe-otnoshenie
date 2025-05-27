@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('handle?');
             localStorage.removeItem('access_token'); // Удаляем токен
             localStorage.removeItem('refresh_token'); // Удаляем токен
-            window.location.href = 'http://localhost:8080/';
+            window.location.href = 'http://localhost:9293/';
         });
     }
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/verifyadmin', {
+    fetch('http://localhost:9293/api/verifyadmin', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
         // Ошибка проверки токена
-        fetch('http://localhost:8080/api/verifyteacher', {
+        fetch('http://localhost:9293/api/verifyteacher', {
             method: 'POST',
             headers: {
                 'Authorization': token, // Передаем токен в заголовке
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             // Успешная проверка токена
-            fetch('http://localhost:8080/api/getteacherprofiledata', {
+            fetch('http://localhost:9293/api/getteacherprofiledata', {
                 method: 'POST',
                 headers: {
                     'Authorization': token, // Передаем токен в заголовке
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             // Ошибка проверки токена
-            fetch('http://localhost:8080/api/getprofiledata', {
+            fetch('http://localhost:9293/api/getprofiledata', {
                 method: 'POST',
                 headers: {
                     'Authorization': token, // Передаем токен в заголовке
@@ -112,11 +112,11 @@ const profileButton = document.querySelector('.profile-button');
 profileButton.onclick = handleRedirect;
 
 function handleRedirect() {
-    window.location.href = 'http://localhost:8080/profile';
+    window.location.href = 'http://localhost:9293/profile';
 }
 
 function logout() {
     localStorage.removeItem('access_token'); // Удаляем токен
             localStorage.removeItem('refresh_token'); // Удаляем токен
-            window.location.href = 'http://localhost:8080/';
+            window.location.href = 'http://localhost:9293/';
 }

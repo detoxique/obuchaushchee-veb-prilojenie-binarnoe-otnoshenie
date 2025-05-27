@@ -14,7 +14,7 @@ import (
 )
 
 func Run(ctx context.Context) error {
-	slog.Info("Сервер запущен. Порт: 8080")
+	slog.Info("Сервер запущен. Порт: 9293")
 
 	r := mux.NewRouter()
 	// Загрузка статистики
@@ -40,6 +40,7 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/createtest", handlers.ServeCreateTestPage)
 	r.HandleFunc("/course/{name}", handlers.ServeCoursePage)
 	r.HandleFunc("/view/{name}", handlers.ServeViewPage)
+	r.HandleFunc("/trainer", handlers.ServeTrainerPage)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -78,7 +79,7 @@ func Run(ctx context.Context) error {
 
 	http.Handle("/", r)
 
-	if err := http.ListenAndServe(":8080", r); err != nil && err != http.ErrServerClosed {
+	if err := http.ListenAndServe(":9293", r); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 

@@ -75,11 +75,13 @@ func (s *TestService) StartAttempt(ctx context.Context, userID, testID int) (*mo
 
 func (s *TestService) SubmitAnswer(ctx context.Context, userID int, answer *models.UserAnswer) error {
 	// Проверяем, принадлежит ли attempt пользователю
+
 	// Получаем вопрос и правильные ответы
 
 	// В зависимости от типа вопроса проверяем ответ
 	points, err := s.evaluateAnswer(ctx, answer.QuestionID, answer.AnswerData)
 	if err != nil {
+		log.Println(err.Error())
 		return err
 	}
 
@@ -107,6 +109,9 @@ func (s *TestService) evaluateAnswer(ctx context.Context, questionID int, answer
 	// Проверяем ответ в зависимости от типа вопроса
 	switch question.QuestionType {
 	case "single_choice":
+		if len(options) == 0 {
+			return 0, nil // Если нет вариантов
+		}
 		var answer struct {
 			SelectedOptionID int `json:"selected_option_id"`
 		}
@@ -158,7 +163,7 @@ func (s *TestService) evaluateAnswer(ctx context.Context, questionID int, answer
 		return 0, nil
 
 	case "matching":
-		// Аналогично для сопоставления
+		// TODO: проверка
 		return 0, nil
 
 	default:

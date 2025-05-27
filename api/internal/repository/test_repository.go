@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 )
 
 type TestRepository struct {
@@ -69,6 +70,8 @@ func (r *TestRepository) GetTestQuestions(ctx context.Context, testID string) ([
 		}
 		questions = append(questions, q)
 	}
+
+	log.Println(len(questions))
 
 	return questions, nil
 }

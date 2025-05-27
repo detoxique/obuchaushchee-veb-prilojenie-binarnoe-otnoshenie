@@ -82,6 +82,16 @@ func ServeNotificationsPage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// Страница тренажера
+func ServeTrainerPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/trainer.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
 // Страница админ панели
 func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Проверять, авторизован ли пользователь в учетку админа
@@ -425,13 +435,13 @@ func GetProfileData(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if len(profileData.Courses[i].Tests)%10 == 0 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02/01/2006") + `!</h4></li>`
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
 		} else if len(profileData.Courses[i].Tests)%10 == 1 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тест до ` + date.Format("02/01/2006") + `!</h4></li>`
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тест до ` + date.Format("02.01.2006") + `!</h4></li>`
 		} else if len(profileData.Courses[i].Tests)%10 > 1 && len(profileData.Courses[i].Tests)%10 < 5 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` теста до ` + date.Format("02/01/2006") + `!</h4></li>`
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` теста до ` + date.Format("02.01.2006") + `!</h4></li>`
 		} else {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02/01/2006") + `!</h4></li>`
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
 		}
 
 		if i > 0 {
@@ -675,7 +685,7 @@ func GetTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
                                     <div class="btn-group" role="group" aria-label="Basic example">
                                       <form action="/upload" method="POST" enctype="multipart/form-data">
                                         <input type="file" name="myFile" id="fileInput-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" required>
-                                        <button type="submit" class="btn btn-primary">Загрузить</button>
+                                        <button type="submit" class="btn btn-primary" onclick="document.getElementById('file-input').click()">Загрузить</button>
                                       </form>
                                       <button type="button" class="btn btn-primary">Выбрать из загруженных</button>
                                     </div>
@@ -833,7 +843,12 @@ func GetCoursesData(w http.ResponseWriter, r *http.Request) {
 	coursesHTML := `<ul class="courses-list">`
 
 	for i := 0; i < len(coursesData.Courses); i++ {
-		coursesHTML += `<li><a href="/course/` + coursesData.Courses[i] + `">` + coursesData.Courses[i] + `</a><br><h4>1 Тест до 01.02.2025!</h4></li>`
+		if len(coursesData.Courses[i].Tests) > 0 {
+			coursesHTML += `<li><a href="/course/` + coursesData.Courses[i].Name + `">` + coursesData.Courses[i].Name + `</a><br><h4>Тест до ` + coursesData.Courses[i].Tests[0].EndDate.Format("02.01.2006") + `!</h4></li>`
+		} else {
+			coursesHTML += `<li><a href="/course/` + coursesData.Courses[i].Name + `">` + coursesData.Courses[i].Name + `</a><br><h4></h4></li>`
+		}
+
 	}
 
 	coursesHTML += `</ul>`
@@ -1079,13 +1094,15 @@ func ServeCoursePage(w http.ResponseWriter, r *http.Request) {
 
 	var filesHTML string
 	for i := 0; i < len(pageData.Course.Files); i++ {
-		filesHTML += `<li><a href="/view/` + pageData.Course.Files[i].Name + `">` + pageData.Course.Files[i].Name + `</a><br><h4>Загружено: ` + pageData.Course.Files[i].UploadDate.String() + `</h4></li>`
+		filesHTML += `<li><a href="/view/` + pageData.Course.Files[i].Name + `">` + pageData.Course.Files[i].Name + `</a><br><h4>Загружено: ` + pageData.Course.Files[i].UploadDate.Format("02.01.2006") + `</h4></li>`
 	}
 
 	var testsHTML string
 	for i := 0; i < len(pageData.Course.Tests); i++ {
-		testsHTML += `<li><a href="#">` + pageData.Course.Tests[i].Title + `</a><br><h4>Должен быть выполнен до: ` + pageData.Course.Tests[i].EndDate.String() + `</h4></li>`
+		testsHTML += `<li><a href="#">` + pageData.Course.Tests[i].Title + `</a><br><h4>Должен быть выполнен до: ` + pageData.Course.Tests[i].EndDate.Format("02.01.2006") + `</h4></li>`
 	}
+
+	slog.Info("Количество тестов: " + strconv.Itoa(len(pageData.Course.Tests)))
 
 	data := struct {
 		CourseName template.HTML `json:"CourseName"`
@@ -1818,11 +1835,10 @@ func GetTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("Отправлен запрос на подтверждение токена")
-
 	// Отправка запроса на другой сервер
 	resp, err := http.Get("http://localhost:1337/api/tests/test/" + id)
 	if err != nil {
+		slog.Info("Ошибка при получении теста")
 		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
 		return
 	}
@@ -1855,24 +1871,7 @@ func StartAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startInfo := struct {
-		Id    int    `json:"id"`
-		Token string `json:"token"`
-	}{}
-
-	err := json.NewDecoder(r.Body).Decode(&startInfo)
-	if err != nil {
-		slog.Info("Не удалось считать данные для входа")
-		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
-		return
-	}
-
-	body, err := json.Marshal(&startInfo)
-	if err != nil {
-		slog.Info("Ошибка преобразования в JSON")
-		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
-		return
-	}
+	body, _ := io.ReadAll(r.Body)
 
 	// Отправка запроса на другой сервер
 	resp, err := http.Post("http://localhost:1337/api/tests/attempts", "application/json", bytes.NewBuffer(body))
@@ -1886,7 +1885,7 @@ func StartAttempt(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера авторизации")
+		slog.Info("Невозможно начать попытку.")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -1909,16 +1908,15 @@ func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
-		return
-	}
+	body, _ := io.ReadAll(r.Body)
+
+	slog.Info(string(body))
 
 	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1337/api/attempts/answer", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://localhost:1337/api/attempts/answers", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		slog.Info("Ошибка отправки ответа")
+		http.Error(w, "Ошибка отправки ответа", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
@@ -1927,7 +1925,7 @@ func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера авторизации")
+		slog.Info("Ошибка отправки ответа")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -1937,6 +1935,7 @@ func SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	// Успешный ответ
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
+		slog.Info("Ошибка чтения ответа")
 		http.Error(w, "Ошибка чтения ответа", http.StatusInternalServerError)
 		return
 	}

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Тренажер бинарных отношений</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    #container {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    #relation-matrix {
+      margin-right: 20px;
+      border: 1px solid #ccc;
+      border-collapse: collapse;
+    }
+
+    #relation-matrix th, #relation-matrix td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+      min-width: 30px;
+    }
+
+    #relation-matrix th {
+      background-color: #f0f0f0;
+    }
+
+    #controls {
+      margin-bottom: 20px;
+    }
+
+    #properties {
+      margin-top: 20px;
+    }
+
+    .property-result {
+      font-weight: bold;
+    }
+
+    #graph-container {
+      width: 400px;
+      height: 400px;
+      border: 1px solid #ccc;
+      position: relative;
+    }
+
+    .node {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: lightblue;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .arrow {
+      position: absolute;
+      background-color: black;
+      height: 2px;
+      transform-origin: 0 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Тренажер бинарных отношений</h1>
+
+  <div id="controls">
+    <label for="set-size">Размер множества:</label>
+    <input type="number" id="set-size" min="2" max="6" value="3">
+    <button id="generate-button">Сгенерировать</button>
+  </div>
+
+  <div id="container">
+    <div>
+      <h2>Матрица отношения</h2>
+      <table id="relation-matrix"></table>
+    </div>
+    <div>
+      <h2>Граф отношения</h2>
+      <div id="graph-container"></div>
+    </div>
+  </div>
+
+
+  <div id="properties">
+    <h2>Свойства отношения:</h2>
+    <p>Рефлексивность: <span id="reflexive" class="property-result"></span></p>
+    <p>Антирефлексивность: <span id="antireflexive" class="property-result"></span></p>
+    <p>Симметричность: <span id="symmetric" class="property-result"></span></p>
+    <p>Антисимметричность: <span id="antisymmetric" class="property-result"></span></p>
+    <p>Транзитивность: <span id="transitive" class="property-result"></span></p>
+  </div>
+
+  <script>
+    const setSizeInput = document.getElementById("set-size");
+    const generateButton = document.getElementById("generate-button");
+    const relationMatrixTable = document.getElementById("relation-matrix");
+    const reflexiveSpan = document.getElementById("reflexive");
+    const antireflexiveSpan = document.getElementById("antireflexive");
+    const symmetricSpan = document.getElementById("symmetric");
+    const antisymmetricSpan = document.getElementById("antisymmetric");
+    const transitiveSpan = document.getElementById("transitive");
+    const graphContainer = document.getElementById("graph-container");
+
+    let setSize = parseInt(setSizeInput.value);
+    let relationMatrix = [];
+    let nodePositions = [];  // Store positions of nodes for drawing arrows
+
+    generateButton.addEventListener("click", generateMatrix);
+    setSizeInput.addEventListener("change", () => {
+      setSize = parseInt(setSizeInput.value);
+      generateMatrix();
+    });
+
+
+    function generateMatrix() {
+      relationMatrix = [];
+      for (let i = 0; i < setSize; i++) {
+        relationMatrix[i] = [];
+        for (let j = 0; j < setSize; j++) {
+          relationMatrix[i][j] = Math.random() < 0.5 ? 1 : 0;  // Randomly set to 0 or 1
+        }
+      }
+
+      renderMatrix();
+      renderGraph();
+      checkProperties();
+    }
+
+    function renderMatrix() {
+      relationMatrixTable.innerHTML = ""; // Clear previous matrix
+
+      // Create header row
+      let headerRow = document.createElement("tr");
+      let emptyHeader = document.createElement("th");
+      headerRow.appendChild(emptyHeader);
+
+      for (let i = 0; i < setSize; i++) {
+        let th = document.createElement("th");
+        th.textContent = i + 1;
+        headerRow.appendChild(th);
+      }
+      relationMatrixTable.appendChild(headerRow);
+
+
+      for (let i = 0; i < setSize; i++) {
+        let row = document.createElement("tr");
+        let rowHeader = document.createElement("th");
+        rowHeader.textContent = i + 1;
+        row.appendChild(rowHeader);
+
+        for (let j = 0; j < setSize; j++) {
+          let cell = document.createElement("td");
+          cell.textContent = relationMatrix[i][j];
+          cell.addEventListener("click", () => {
+            relationMatrix[i][j] = 1 - relationMatrix[i][j]; // Toggle 0 and 1
+            cell.textContent = relationMatrix[i][j];
+            renderGraph();
+            checkProperties();
+          });
+          row.appendChild(cell);
+        }
+        relationMatrixTable.appendChild(row);
+      }
+    }
+
+    function renderGraph() {
+      graphContainer.innerHTML = ""; // Clear previous graph
+      nodePositions = []; // Reset node positions
+
+      // Calculate node positions in a circle
+      const radius = Math.min(graphContainer.offsetWidth, graphContainer.offsetHeight) / 2 - 20;
+      const centerX = graphContainer.offsetWidth / 2;
+      const centerY = graphContainer.offsetHeight / 2;
+
+      for (let i = 0; i < setSize; i++) {
+        const angle = 2 * Math.PI * i / setSize;
+        const x = centerX + radius * Math.cos(angle) - 15; // Subtract half node width/height
+        const y = centerY + radius * Math.sin(angle) - 15;
+
+        nodePositions.push({ x: x + 15, y: y + 15 }); // Store center position
+
+        const node = document.createElement("div");
+        node.classList.add("node");
+        node.textContent = i + 1;
+        node.style.left = x + "px";
+        node.style.top = y + "px";
+        graphContainer.appendChild(node);
+      }
+
+      // Draw arrows
+      for (let i = 0; i < setSize; i++) {
+        for (let j = 0; j < setSize; j++) {
+          if (relationMatrix[i][j] === 1) {
+            drawArrow(nodePositions[i], nodePositions[j]);
+          }
+        }
+      }
+    }
+
+    function drawArrow(start, end) {
+      const arrow = document.createElement("div");
+      arrow.classList.add("arrow");
+      graphContainer.appendChild(arrow);
+
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      arrow.style.width = length + "px";
+      arrow.style.left = start.x + "px";
+      arrow.style.top = start.y + "px";
+      arrow.style.transform = `rotate(${angle}deg)`;
+
+      // Optional: Add arrowhead (using CSS or an SVG)
+    }
+
+    function checkProperties() {
+      reflexiveSpan.textContent = isReflexive() ? "Да" : "Нет";
+      antireflexiveSpan.textContent = isAntireflexive() ? "Да" : "Нет";
+      symmetricSpan.textContent = isSymmetric() ? "Да" : "Нет";
+      antisymmetricSpan.textContent = isAntisymmetric() ? "Да" : "Нет";
+      transitiveSpan.textContent = isTransitive() ? "Да" : "Нет";
+    }
+
+    function isReflexive() {
+      for (let i = 0; i < setSize; i++) {
+        if (relationMatrix[i][i] !== 1) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function isAntireflexive() {
+      for (let i = 0; i < setSize; i++) {
+        if (relationMatrix[i][i] !== 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function isSymmetric() {
+      for (let i = 0; i < setSize; i++) {
+        for (let j = i + 1; j < setSize; j++) { // Check only upper triangle
+          if (relationMatrix[i][j] !== relationMatrix[j][i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function isAntisymmetric() {
+      for (let i = 0; i < setSize; i++) {
+        for (let j = i + 1; j < setSize; j++) {
+          if (relationMatrix[i][j] === 1 && relationMatrix[j][i] === 1) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function isTransitive() {
+        for (let i = 0; i < setSize; i++) {
+            for (let j = 0; j < setSize; j++) {
+                if (relationMatrix[i][j] === 1) {
+                    for (let k = 0; k < setSize; k++) {
+                        if (relationMatrix[j][k] === 1 && relationMatrix[i][k] !== 1) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    // Initial generation
+    generateMatrix();
+
+  </script>
+</body>
+</html>

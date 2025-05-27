@@ -201,3 +201,7 @@ button[type="mybutton"] {
 .tests-list li:last-child {
     border-bottom: none;
 }
+
+input[type="file"] {
+            display: none;
+        }

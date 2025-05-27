@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 // Отправка данных на сервер
-                fetch('http://localhost:8080//api/tests', {
+                fetch('http://localhost:9293/api/tests', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

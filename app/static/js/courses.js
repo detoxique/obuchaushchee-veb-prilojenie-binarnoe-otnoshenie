@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/getteachercoursesdata', {
+    fetch('http://localhost:9293/api/getteachercoursesdata', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
         // Ошибка проверки токена
-        fetch('http://localhost:8080/api/getcoursesdata', {
+        fetch('http://localhost:9293/api/getcoursesdata', {
             method: 'POST',
             headers: {
                 'Authorization': token, // Передаем токен в заголовке
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function handleRedirect() {
-    window.location.href = 'http://localhost:8080/profile';
+    window.location.href = 'http://localhost:9293/profile';
 }
 
 function gotonotifications() {

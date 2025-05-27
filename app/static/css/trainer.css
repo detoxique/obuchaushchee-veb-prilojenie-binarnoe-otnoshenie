@@ -1,0 +1,46 @@
+.container-fluid a{
+    font-size: 20px;
+    white-space: nowrap;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+}
+
+.nav-item a{
+    font-weight: 400;
+    font-size: 18px;
+}
+
+.round {
+    border-radius: 20px; /* Радиус скругления */
+}
+
+.round:hover{
+    cursor: pointer;
+}
+
+.show-notifications {
+    margin-right: 24px;
+}
+
+.container-md h2{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin-top: 24px;
+}
+
+#relationCanvas {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.controls {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}

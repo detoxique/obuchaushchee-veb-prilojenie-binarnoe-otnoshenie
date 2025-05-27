@@ -16,6 +16,14 @@ function handleinput(e, name) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
+
+    // if (form.login.value != "") {
+    //     form.login.classList.add('filled');
+    // }
+
+    // if (form.password.value != "") {
+    //     form.password.classList.add('filled');
+    // }
     
     if (!token) {
         // Токена нет
@@ -27,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form[password].classList.remove('filled')
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/verify', {
+    fetch('http://localhost:9293/api/verify', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -53,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         //localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
         //setTimeout(() => window.location.href = '/', 5000);
 
-        fetch('http://localhost:8080/api/refreshtoken', {
+        fetch('http://localhost:9293/api/refreshtoken', {
             method: 'POST',
             headers: {
             'Authorization': localStorage.getItem('refresh_token'), // Передаем токен в заголовке

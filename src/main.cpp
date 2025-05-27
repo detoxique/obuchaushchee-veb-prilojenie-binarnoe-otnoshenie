@@ -261,6 +261,8 @@ struct TestsData {
     std::vector<Test> Tests;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TestsData, Tests)
+
 struct AnswerOption {
     int id;
     int question_id;
@@ -291,10 +293,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TestResponse, test, questions)
 
 struct UserAnswer {
     int question_id;
+    int attempt_id;
     nlohmann::json answer_data;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserAnswer, question_id, answer_data)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserAnswer, question_id, attempt_id, answer_data)
 
 struct SubmitAnswer {
     std::string token;
@@ -302,6 +305,16 @@ struct SubmitAnswer {
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SubmitAnswer, token, answer)
+
+struct TestAttempt {
+    int id;
+    int user_id;
+    int test_id;
+    std::tm started_at;
+    std::string status;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TestAttempt, id, user_id, test_id, started_at, status)
 
 // Функция для парсинга даты из строки
 bool parse_date(const std::string& date_str, std::tm& tm) {
@@ -333,9 +346,37 @@ namespace nlohmann {
     };
 
     template <>
-    struct adl_serializer<TestsData> {
-        static void from_json(const json& j, TestsData& td) {
-            j.at("Tests").get_to(td.Tests);
+    struct adl_serializer<std::tm> {
+        static void from_json(const json& j, std::tm& tm) {
+            std::istringstream ss(j.get<std::string>());
+            ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+        }
+
+        static void to_json(json& j, const std::tm& tm) {
+            std::ostringstream oss;
+            oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+            j = oss.str();
+        }
+    };
+
+    template <typename T>
+    struct adl_serializer<std::optional<T>> {
+        static void from_json(const json& j, std::optional<T>& opt) {
+            if (j.is_null()) {
+                opt = std::nullopt;
+            }
+            else {
+                opt = j.get<T>();
+            }
+        }
+
+        static void to_json(json& j, const std::optional<T>& opt) {
+            if (opt == std::nullopt) {
+                j = nullptr;
+            }
+            else {
+                j = *opt;
+            }
         }
     };
 }
@@ -350,6 +391,7 @@ std::string removeChar(std::string str, char ch);
 bool getRadioButtonState(tgui::ScrollablePanel::Ptr panel, const tgui::String& name);
 bool getCheckBoxState(tgui::ScrollablePanel::Ptr panel, const tgui::String& name);
 void showDialog();
+void emergencyEndTest();
 
 tgui::EditBox::Ptr editBoxLogin;
 tgui::EditBox::Ptr editBoxPassword;
@@ -360,6 +402,7 @@ LocalStorage localStorage;
 TestsData tests_data;
 
 TestResponse response;
+TestAttempt attempt;
 
 int CurrentPage = 0, RealPage = 0;
 // 0 - авторизация
@@ -511,6 +554,36 @@ int main()
         // GUI
     }
 
+    // Модальное окно
+    tgui::ChildWindow::Ptr dialog = tgui::ChildWindow::create();
+    dialog->setTitle(u8"Предупреждение");
+    dialog->setSize(400, 150);
+    dialog->setPosition("50%", "50%");
+    dialog->setOrigin(0.5f, 0.5f);
+    dialog->setPositionLocked(true);
+    dialog->setResizable(false);
+
+    // Поле ввода
+    auto labelAttention = tgui::Label::create(u8"Вы действительно хотите завершить тестирование?");
+    labelAttention->setPosition("10%", "20%");
+    dialog->add(labelAttention);
+
+    // Кнопки
+    auto btnOk = tgui::Button::create(u8"Да");
+    btnOk->setSize(80, 30);
+    btnOk->setPosition("50% - 90", "70%");
+    btnOk->onPress([dialog] {
+        sendAnswers();
+        dialog->close();
+        });
+    dialog->add(btnOk);
+
+    auto btnCancel = tgui::Button::create(u8"Отмена");
+    btnCancel->setSize(80, 30);
+    btnCancel->setPosition("50% + 10", "70%");
+    btnCancel->onPress([dialog] { show_dialog = false; dialog_shown = false; dialog->close(); });
+    dialog->add(btnCancel);
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -518,45 +591,21 @@ int main()
         {
             gui.handleEvent(event);
 
-            if (event.type == sf::Event::Resized) {
+            if (event.type == sf::Event::Resized && CurrentPage == 1) {
                 gui.get("startButton")->setPosition({ 25, window.getSize().y - 120 });
                 gui.get("exitButton")->setPosition({25, window.getSize().y - 70});
                 gui.get("tests")->setSize({window.getSize().x - 50, window.getSize().y - 220 });
+            }
+
+            if (event.type == sf::Event::LostFocus && CurrentPage == 3) {
+                emergencyEndTest();
             }
 
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
-        // Модальное окно
-        tgui::ChildWindow::Ptr dialog = tgui::ChildWindow::create();
-        dialog->setTitle(u8"Предупреждение");
-        dialog->setSize(400, 150);
-        dialog->setPosition("50%", "50%");
-        dialog->setOrigin(0.5f, 0.5f);
-        dialog->setPositionLocked(true);
-        dialog->setResizable(false);
-
-        // Поле ввода
-        auto labelAttention = tgui::Label::create(u8"Вы действительно хотите завершить тестирование?");
-        labelAttention->setPosition("10%", "20%");
-        dialog->add(labelAttention);
-
-        // Кнопки
-        auto btnOk = tgui::Button::create(u8"Да");
-        btnOk->setSize(80, 30);
-        btnOk->setPosition("50% - 90", "70%");
-        btnOk->onPress([dialog] {
-            sendAnswers();
-            dialog->close();
-            });
-        dialog->add(btnOk);
-
-        auto btnCancel = tgui::Button::create(u8"Отмена");
-        btnCancel->setSize(80, 30);
-        btnCancel->setPosition("50% + 10", "70%");
-        btnCancel->onPress([dialog] { show_dialog = false; dialog_shown = false; dialog->close(); });
-        dialog->add(btnCancel);
+        
 
         if (CurrentPage == 0 && RealPage != 0) {
             RealPage = 0;
@@ -833,7 +882,7 @@ static bool verifyToken(const std::string& str_token) {
     if (str_token == "")
         return 0;
 
-    httplib::Client cli("localhost:8080");
+    httplib::Client cli("localhost:9293");
 
     // POST-запрос с JSON
     httplib::Headers headers = {
@@ -879,7 +928,7 @@ void login() {
     if (validate()) {
         std::cout << "Validated" << std::endl;
     }
-    httplib::Client cli("localhost:8080");
+    httplib::Client cli("localhost:9293");
 
     // POST-запрос с JSON
     httplib::Headers headers = {
@@ -916,7 +965,7 @@ void getTestsData() {
         return;
     }
 
-    httplib::Client cli("localhost:8080");
+    httplib::Client cli("localhost:9293");
 
     // POST-запрос с JSON
     httplib::Headers headers = {
@@ -960,7 +1009,7 @@ void getTestsData() {
 void getTestData(int selected_listview_item) {
     int id = tests_data.Tests[selected_listview_item].Id;
 
-    httplib::Client cli("localhost:8080");
+    httplib::Client cli("localhost:9293");
 
     // Выполнение GET-запроса
     auto res = cli.Get("/api/tests/test/" + std::to_string(id));
@@ -978,11 +1027,11 @@ void getTestData(int selected_listview_item) {
             std::cout << "Questions count: " << response.questions.size() << std::endl;
 
             // Сохранение в файл
-            std::ofstream output("test_data.json");
+            /*std::ofstream output("test_data.json");
             output << std::setw(4) << j << std::endl;
-            output.close();
+            output.close();*/
 
-            std::cout << "Data saved to test_data.json" << std::endl;
+            //std::cout << "Data saved to test_data.json" << std::endl;
             got_questions = true;
 
         }
@@ -1018,22 +1067,30 @@ void startTest() {
     getTestData(listViewElement);
     
     if (got_questions) {
-        test_started = true;
-        CurrentPage = 3;
-
         // Начинаем попытку
-        httplib::Client cli("localhost:8080");
+        httplib::Client cli("localhost:9293");
 
         // POST-запрос с JSON
         httplib::Headers headers = {
             {"Content-Type", "application/json"}
         };
-        std::string body = R"({"id": ")" + std::to_string(listViewElement) + R"(", "token": ")" + localStorage.GetAccessToken() + R"("})";
+        std::string body = R"({"id": ")" + std::to_string(tests_data.Tests[listViewElement].Id) + R"(", "token": ")" + localStorage.GetAccessToken() + R"("})";
 
         auto post_res = cli.Post("/api/tests/startattempt", headers, body, "application/json");
         if (post_res && post_res->status == 200) {
-            test_started = true;
-            CurrentPage = 3;
+            try {
+                nlohmann::json j = nlohmann::json::parse(post_res->body);
+
+                attempt = j.get<TestAttempt>();
+
+                test_started = true;
+                CurrentPage = 3;
+                disable_network_interface();
+            }
+            catch (const std::exception& e) {
+                std::cout << post_res->body << std::endl;
+                std::cerr << "JSON parse error: " << e.what() << std::endl;
+            }
         }
         else {
             test_started = false;
@@ -1042,8 +1099,12 @@ void startTest() {
 }
 
 void sendAnswers() {
+    if (!enable_network_interface()) {
+        std::cout << "Ошибка подключения" << std::endl;
+        return;
+    }
     // Отправление ответов
-    httplib::Client cli("localhost:8080");
+    httplib::Client cli("localhost:9293");
 
     // POST-запрос с JSON
     httplib::Headers headers = {
@@ -1081,7 +1142,7 @@ void sendAnswers() {
                 text = textfield->getText().toStdString();
             answer_json["answer_text"] = text;
         }
-        UserAnswer answer{ response.questions[i].id, answer_json };
+        UserAnswer answer{ response.questions[i].id, attempt.id, answer_json };
         SubmitAnswer data{ localStorage.GetAccessToken(), answer };
         nlohmann::json j = data;
 
@@ -1109,4 +1170,27 @@ void sendAnswers() {
     }
 
     CurrentPage = 1;
+}
+
+void emergencyEndTest() {
+    if (!enable_network_interface()) {
+        std::cout << "Ошибка подключения" << std::endl;
+        return;
+    }
+    CurrentPage = 1;
+    // Отправление ответов
+    httplib::Client cli("localhost:9293");
+
+    // POST-запрос с JSON
+    httplib::Headers headers = {
+        {"Content-Type", "application/json"}
+    };
+
+    auto post_res = cli.Post("/api/attempts/answer", headers, u8"Пойман на списывании", "application/json");
+    if (post_res && post_res->status == 200) {
+        std::cout << "Сообщение о списывании отправлено." << std::endl;
+    }
+    else {
+        std::cout << "Ошибка при отправке сообщения." << std::endl;
+    }
 }

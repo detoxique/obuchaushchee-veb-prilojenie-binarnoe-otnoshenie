@@ -66,7 +66,7 @@ type TeacherCoursesPageData struct {
 }
 
 type CoursesPageData struct {
-	Courses []string `json:"Courses"`
+	Courses []Course `json:"Courses"`
 }
 
 // Группа

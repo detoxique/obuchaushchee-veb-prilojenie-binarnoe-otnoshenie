@@ -675,6 +675,8 @@ WHERE u.username = $1`, username).Scan(&coursesCount)
 	for i := 1; i <= coursesCount; i++ {
 		var id int
 		var name string
+		// var files []models.File
+		// var tests []models.Test
 		err = Db.QueryRow(`WITH numbered_rows AS (
     	SELECT c.id, c.name, ROW_NUMBER() OVER (ORDER BY c.id DESC) as row_num
 	FROM users u
@@ -791,38 +793,10 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	var data models.CoursesPageData
 
-	// Получение количества курсов в БД
-	var coursesCount int
-	err = Db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&coursesCount)
-	if err == sql.ErrNoRows {
-		log.Println("Неправильные данные")
-		sendError(w, "Неправильные данные", http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		log.Println("Ошибка базы данных")
-		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	log.Println("Количество курсов: " + strconv.Itoa(coursesCount))
-
-	// Считывание курсов из БД
-	courses := make([]string, coursesCount)
-	for i := 1; i <= coursesCount; i++ {
-		var id int
-		var name string
-		err = Db.QueryRow("SELECT id, name FROM (SELECT *, ROW_NUMBER() OVER () as row_num FROM courses) AS subquery WHERE row_num = $1", i).Scan(&id, &name)
-		if err == sql.ErrNoRows {
-			log.Println("Неправильные данные")
-			sendError(w, "Неправильные данные", http.StatusUnauthorized)
-			return
-		} else if err != nil {
-			log.Println("Ошибка базы данных")
-			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Println(name)
-		courses[i-1] = name
+	courses, err := GetUserCourses(Db, username)
+	if err != nil {
+		log.Println("Ошибка получения данных курсов из БД")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
 	}
 
 	data.Courses = courses
@@ -1129,7 +1103,7 @@ func getCourseData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var testsCount int
-	err = Db.QueryRow("SELECT COUNT(*) FROM tests WHERE id_course = $1", courseID).Scan(&filesCount)
+	err = Db.QueryRow("SELECT COUNT(*) FROM tests WHERE id_course = $1", courseID).Scan(&testsCount)
 	if err == sql.ErrNoRows {
 		log.Println("Неправильные данные")
 		sendError(w, "Неправильные данные", http.StatusUnauthorized)
@@ -1164,6 +1138,7 @@ func getCourseData(w http.ResponseWriter, r *http.Request) {
 	data := models.ServeCoursePage{
 		Course: course,
 	}
+	log.Println("Количество тестов: " + strconv.Itoa(len(tests)))
 
 	// Отправляем JSON-ответ
 	w.Header().Set("Content-Type", "application/json")

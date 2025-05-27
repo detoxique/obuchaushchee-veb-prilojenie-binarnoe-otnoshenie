@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/getadminpaneldata', {
+    fetch('http://localhost:9293/api/getadminpaneldata', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -56,7 +56,7 @@ function handleAddUser() {
     const Role = document.getElementsByName('role')[0].value;
     const Groupname = document.getElementsByName('groupname')[0].value;
 
-    fetch('http://localhost:8080/api/admin/adduser', {
+    fetch('http://localhost:9293/api/admin/adduser', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ function handleAddGroup() {
     const GroupName = document.getElementsByName('groupname-input')[0].value;
     console.log(GroupName);
 
-    fetch('http://localhost:8080/api/admin/addgroup', {
+    fetch('http://localhost:9293/api/admin/addgroup', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -110,7 +110,7 @@ function handleAddGroup() {
 function logout() {
     localStorage.removeItem('access_token'); // Удаляем токен
     localStorage.removeItem('refresh_token'); // Удаляем токен
-    window.location.href = 'http://localhost:8080/';
+    window.location.href = 'http://localhost:9293/';
 }
 
 // Нажатия кнопок
@@ -149,7 +149,7 @@ document.addEventListener('click', function(event) {
         else if (buttonId.startsWith('delete-user-')) {
             const Username = buttonId.replace('delete-user-', '');
             console.log('Нажата кнопка удаления пользователя, имя:', Username);
-            fetch('http://localhost:8080/api/admin/deleteuser', {
+            fetch('http://localhost:9293/api/admin/deleteuser', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

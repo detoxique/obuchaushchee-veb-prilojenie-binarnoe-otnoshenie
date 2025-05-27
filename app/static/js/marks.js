@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Отправляем токен на сервер для проверки
-    fetch('http://localhost:8080/api/getteachermarksdata', {
+    fetch('http://localhost:9293/api/getteachermarksdata', {
         method: 'POST',
         headers: {
             'Authorization': token, // Передаем токен в заголовке
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function fetchMarks() {
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
-    fetch('http://localhost:8080/api/getmarksdata', {
+    fetch('http://localhost:9293/api/getmarksdata', {
             method: 'POST',
             headers: {
                 'Authorization': token, // Передаем токен в заголовке
@@ -61,7 +61,7 @@ function fetchMarks() {
 }
 
 function handleRedirect() {
-    window.location.href = 'http://localhost:8080/profile';
+    window.location.href = 'http://localhost:9293/profile';
 }
 
 function gotonotifications() {

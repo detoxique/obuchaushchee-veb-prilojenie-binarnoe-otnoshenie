@@ -89,3 +89,34 @@
     margin-left: 24px;
     font-size: 20px;
 }
+
+.tests-list {
+    list-style: none;
+    padding: 12px 24px;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+}
+
+.tests-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.tests-list a{
+    color: #000000;
+    text-decoration: underline;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1em;
+}
+
+.tests-list h4 {
+    color: #3b3b3b;
+    font-family: "Inter", sans-serif;
+    font-weight: 400;
+    font-size: 1em;
+}
+
+.tests-list li:last-child {
+    border-bottom: none;
+}

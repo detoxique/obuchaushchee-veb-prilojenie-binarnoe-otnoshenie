@@ -10,5 +10,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function handleRedirect() {
-    window.location.href = 'http://localhost:8080/profile';
+    window.location.href = 'http://localhost:9293/profile';
 }
