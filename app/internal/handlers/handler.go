@@ -58,6 +58,20 @@ func ServeCoursesPage(w http.ResponseWriter, r *http.Request) {
 	UpdateStats()
 }
 
+func ServeTeacherCoursesPage(w http.ResponseWriter, r *http.Request) {
+	models.Stats.ПосещенияКурсы++
+
+	tmpl, err := template.ParseFiles("templates/coursesteacher.html")
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl.Execute(w, nil)
+
+	UpdateStats()
+}
+
 // Страница оценок
 func ServeMarksPage(w http.ResponseWriter, r *http.Request) {
 	models.Stats.ПосещенияОценки++
@@ -125,11 +139,14 @@ func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServeCreateTestPage(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		http.Error(w, "ID is required", http.StatusBadRequest)
+	if r.Method != "GET" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
 		return
 	}
+
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	// Подготовка запроса к другому серверу
 	body, err := json.Marshal(&id)
@@ -653,115 +670,9 @@ func GetTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tableHTML string
-	for i := 0; i < len(coursesData.Courses); i++ {
-		tableHTML += `<tr>`
-		tableHTML += `<td>` + coursesData.Courses[i].Name + `</td>`
-		tableHTML += `<td><button type="button" id="show-theory-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#filesModal">
-                          Просмотреть
-                        </button>`
-		// Modal
-		tableHTML += `<div class="modal fade" id="filesModal" tabindex="-1" aria-labelledby="filesModalLabel" aria-hidden="true">
-                          <div class="modal-dialog">
-                            <div class="modal-content">
-                              <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="filesModalLabel">Загруженные файлы</h1>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                              </div>
-                              <div class="modal-body">
-                                
-                                <ul class="file-list">`
-		for j := 0; j < len(coursesData.Courses[i].Files); j++ {
-			tableHTML += `<li><a href="#">` + coursesData.Courses[i].Files[j].Name + `</a><br><h4>Загружено: ` + coursesData.Courses[i].Files[j].UploadDate.String() + `</h4></li>`
-		}
-		tableHTML += `</ul>`
-		tableHTML += `<p class="d-inline-flex gap-1">
-                                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
-                                    Добавить
-                                  </button>
-                                </p>
-                                <div class="collapse" id="collapseExample">
-                                  <div class="card card-body">
-                                    <div class="btn-group" role="group" aria-label="Basic example">
-                                      <form action="/upload" method="POST" enctype="multipart/form-data">
-                                        <input type="file" name="myFile" id="fileInput-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" required>
-                                        <button type="submit" class="btn btn-primary" onclick="document.getElementById('file-input').click()">Загрузить</button>
-                                      </form>
-                                      <button type="button" class="btn btn-primary">Выбрать из загруженных</button>
-                                    </div>
-                                  </div>
-                                </div>`
-		tableHTML += `<div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                                <button type="button" class="btn btn-primary">Сохранить</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        </td>`
-		tableHTML += `<td>`
-		tableHTML += `<button type="button" id="show-tests-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#testsModal">
-                          Просмотреть
-                        </button>`
-		tableHTML += `<div class="modal fade" id="testsModal" tabindex="-1" aria-labelledby="testsModalLabel" aria-hidden="true">
-                          <div class="modal-dialog">
-                            <div class="modal-content">
-                              <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="testsModalLabel">Тесты</h1>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                              </div>
-                              <div class="modal-body">
-                                
-                                <ul class="tests-list">`
-		for j := 0; j < len(coursesData.Courses[i].Tests); j++ {
-			tableHTML += `<li><a href="#">` + coursesData.Courses[i].Tests[j].Title + `</a><br><h4>Загружено: ` + coursesData.Courses[i].Tests[j].UploadDate.String() + `</h4></li>`
-		}
-		tableHTML += `</ul>`
-		tableHTML += `<p class="d-inline-flex gap-1">
-                                  <button class="btn btn-primary" onclick="() => window.location.href = '/createtest?id=` + strconv.Itoa(coursesData.Courses[i].Id) + `'" id="create-test-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
-                                    Добавить
-                                  </button>
-                                </p>
-                                <div class="collapse" id="collapseExample">
-                                  <div class="card card-body">
-                                    <div class="btn-group" role="group" aria-label="Basic example">
-                                      <button type="button" class="btn btn-primary">Создать</button>
-                                      <button type="button" class="btn btn-primary">Выбрать из готовых</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                                <button type="button" class="btn btn-primary">Сохранить</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        </td>`
-		tableHTML += `<td><button type="button" id="delete-id-` + strconv.Itoa(coursesData.Courses[i].Id) + `" class="btn btn-outline-danger btn-sm">Удалить</button></td>`
-		tableHTML += `</tr>`
-	}
-
-	var groupsHTML string
-	for i := 0; i < len(coursesData.Groups); i++ {
-		groupsHTML += `<option value="` + strconv.Itoa(coursesData.Groups[i].Id) + `">` + coursesData.Groups[i].Name + `</option>`
-	}
-
-	data := struct {
-		CoursesTable template.HTML `json:"CoursesTable"`
-		GroupsSelect template.HTML `json:"GroupsSelect"`
-	}{CoursesTable: template.HTML(tableHTML), GroupsSelect: template.HTML(groupsHTML)}
-
-	// Отправление страницы пользователю
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	tmpl, err := template.ParseFiles("templates/coursesteacher.html")
-	if err != nil {
-		slog.Info("Не удалось получить шаблон страницы профиля " + err.Error())
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		return
-	}
-
-	tmpl.Execute(w, data)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(coursesData)
 }
 
 func GetCoursesData(w http.ResponseWriter, r *http.Request) {
@@ -1457,7 +1368,61 @@ func HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleUploadFile(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на добавление файла")
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
 
+}
+
+func HandleCreateCourse(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на создание курса")
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, _ := io.ReadAll(r.Body)
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/createcourse", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	body, _ = io.ReadAll(resp.Body)
+	w.Write(body)
+}
+
+func HandleDeleteCourse(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Получен запрос на удаление курса")
+	if r.Method != "POST" {
+		slog.Info("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, _ := io.ReadAll(r.Body)
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/deletecourse", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от другого сервера
+	w.Header().Set("Content-Type", "application/json")
+	body, _ = io.ReadAll(resp.Body)
+	w.Write(body)
 }
 
 // Добавление пользователей

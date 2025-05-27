@@ -19,6 +19,58 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    fetch('http://localhost:9293/api/verify', {
+        method: 'POST',
+        headers: {
+            'Authorization': token, // Передаем токен в заголовке
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Token invalid or expired');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Успешная проверка токена
+        console.log(data.message); // Например: "Token valid for user: admin"
+        //document.body.innerHTML = `<h2>Logged in</h2>`;
+    })
+    .catch(error => {
+        // Ошибка проверки токена
+        //console.error('Error:', error);
+        localStorage.removeItem('access_token'); // Удаляем недействительный токен
+        //localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
+        //setTimeout(() => window.location.href = '/', 5000);
+
+        fetch('http://localhost:9293/api/refreshtoken', {
+            method: 'POST',
+            headers: {
+            'Authorization': localStorage.getItem('refresh_token'), // Передаем токен в заголовке
+            'Content-Type': 'application/json'
+        }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Token invalid or expired');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Успешная проверка токена
+            // Сохраняем токен в localStorage
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+        })
+        .catch(error => {
+            // Ошибка проверки токена
+            console.error('Error:', error);
+            localStorage.removeItem('access_token'); // Удаляем недействительный токен
+            localStorage.removeItem('refresh_token'); // Удаляем недействительный токен
+        });
+    });
+
     // Отправляем токен на сервер для проверки
     fetch('http://localhost:9293/api/verifyadmin', {
         method: 'POST',

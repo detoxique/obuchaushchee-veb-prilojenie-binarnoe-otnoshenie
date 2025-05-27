@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Успешная проверка токена
         console.log(data.message); // Например: "Token valid for user: admin"
         //document.body.innerHTML = `<h2>Logged in</h2>`;
-        window.location.href = '/profile';
     })
     .catch(error => {
         // Ошибка проверки токена
@@ -63,7 +62,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Сохраняем токен в localStorage
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('refresh_token', data.refresh_token);
-            window.location.href = '/profile';
         })
         .catch(error => {
             // Ошибка проверки токена

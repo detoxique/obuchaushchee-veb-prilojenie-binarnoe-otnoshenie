@@ -36,11 +36,12 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/marks", handlers.ServeMarksPage)
 	r.HandleFunc("/admin", handlers.ServeAdminPage)
 	r.HandleFunc("/courses", handlers.ServeCoursesPage)
+	r.HandleFunc("/teachercourses", handlers.ServeTeacherCoursesPage)
 	r.HandleFunc("/notifications", handlers.ServeNotificationsPage)
-	r.HandleFunc("/createtest", handlers.ServeCreateTestPage)
 	r.HandleFunc("/course/{name}", handlers.ServeCoursePage)
 	r.HandleFunc("/view/{name}", handlers.ServeViewPage)
 	r.HandleFunc("/trainer", handlers.ServeTrainerPage)
+	r.HandleFunc("/test/create/{id}", handlers.ServeCreateTestPage)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -59,7 +60,9 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/api/getmarksdata", handlers.GetMarksData)
 	r.HandleFunc("/api/gettestsdata", handlers.GetTestsData)
 	r.HandleFunc("/api/gettest", handlers.GetTest)
-	r.HandleFunc("/api/upload", handlers.HandleUploadFile)
+	r.HandleFunc("/api/uploadfile", handlers.HandleUploadFile)
+	r.HandleFunc("/api/createcourse", handlers.HandleCreateCourse)
+	r.HandleFunc("/api/deletecourse", handlers.HandleDeleteCourse)
 
 	r.HandleFunc("/api/admin/adduser", handlers.HandleAddUser)
 	r.HandleFunc("/api/admin/deleteuser", handlers.HandleDeleteUser)

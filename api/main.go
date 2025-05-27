@@ -697,7 +697,69 @@ WHERE row_num = $2`, username, i).Scan(&id, &name)
 			return
 		}
 		log.Println(name)
-		courses[i-1] = models.Course{Id: id, Name: name}
+
+		// Получаем файлы курса
+		var filesCount int
+		err = Db.QueryRow(`SELECT COUNT(*) FROM files WHERE id_course = $1`, id).Scan(&filesCount)
+		if err != nil && err != sql.ErrNoRows {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		files := make([]models.File, filesCount)
+		for j := 1; j <= filesCount; j++ {
+			var file_id int
+			var name string
+			var upload time.Time
+			err = Db.QueryRow(`WITH numbered_rows AS (
+									SELECT id, name, upload_date, ROW_NUMBER() OVER (ORDER BY id DESC) as row_num
+								FROM files
+								WHERE id_course = $1
+							)
+							SELECT id, name, upload_date
+							FROM numbered_rows
+							WHERE row_num = $2`, id, j).Scan(&file_id, &name, &upload)
+			if err != nil && err != sql.ErrNoRows {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			files[j-1] = models.File{Id: file_id, Name: name, UploadDate: upload}
+		}
+
+		// Получаем тесты курса
+		var testsCount int
+		err = Db.QueryRow(`SELECT COUNT(*) FROM tests WHERE id_course = $1`, id).Scan(&testsCount)
+		if err != nil && err != sql.ErrNoRows {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tests := make([]models.Test, testsCount)
+		for j := 1; j <= testsCount; j++ {
+			var test_id int
+			var name string
+			var end_date time.Time
+			var duration int
+			err = Db.QueryRow(`WITH numbered_rows AS (
+									SELECT id, name, ends_date, duration, ROW_NUMBER() OVER (ORDER BY id DESC) as row_num
+								FROM tests
+								WHERE id_course = $1
+							)
+							SELECT id, name, ends_date, duration
+							FROM numbered_rows
+							WHERE row_num = $2`, id, j).Scan(&test_id, &name, &end_date, &duration)
+			if err != nil && err != sql.ErrNoRows {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tests[j-1] = models.Test{ID: test_id, Title: name, EndDate: end_date, Duration: duration}
+		}
+
+		courses[i-1] = models.Course{Id: id, Name: name, Files: files, Tests: tests}
 	}
 
 	data.Courses = courses
@@ -1229,6 +1291,191 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func handleCreateCourse(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на создание курса")
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		Name        string `json:"name"`
+		Description string `json:"desription"`
+		Groups      []int  `json:"groups"`
+		Token       string `json:"access_token"`
+	}
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Println("Некорректный JSON " + err.Error())
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	tokenCheck, err := service.CheckAccessToken(data.Token)
+	if err != nil {
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	if !tokenCheck {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	username := service.GetUsernameGromToken(data.Token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role, user_id string
+	err = Db.QueryRow("SELECT role, id FROM users WHERE username = $1", username).Scan(&role, &user_id)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if role != "teacher" {
+		log.Println("Пользователь не является преподавателем")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	}
+
+	// Прошел проверку
+	// Проверка курса в БД
+	var checkCourse string
+	var course_id int
+	err = Db.QueryRow("SELECT name FROM courses WHERE name = $1", data.Name).Scan(&checkCourse)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// курса нет в базе, продолжаем
+
+			err = Db.QueryRow("INSERT INTO courses (name) VALUES ($1) RETURNING id", data.Name).Scan(&course_id)
+			if err != nil {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			_, err = Db.Exec("INSERT INTO users_courses (id_user, id_course) VALUES ($1, $2)", user_id, course_id)
+			if err != nil {
+				log.Println("Ошибка базы данных")
+				sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			for i := 0; i < len(data.Groups); i++ {
+				_, err = Db.Exec("INSERT INTO groups_courses (id_group, id_course) VALUES ($1, $2)", data.Groups[i], course_id)
+				if err != nil {
+					log.Println("Ошибка базы данных " + err.Error())
+					sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+		} else {
+			log.Println("Ошибка базы данных")
+			sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	returnCourse := models.Course{Id: course_id, Name: data.Name}
+	json.NewEncoder(w).Encode(returnCourse)
+}
+
+func handleDeleteCourse(w http.ResponseWriter, r *http.Request) {
+	log.Println("Получен запрос на удаление курса")
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		Id    string `json:"id"`
+		Token string `json:"token"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	tokenCheck, err := service.CheckAccessToken(data.Token)
+	if err != nil {
+		log.Println("Токен не валиден. " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	if !tokenCheck {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	username := service.GetUsernameGromToken(data.Token)
+	log.Println("Получаем данные для пользователя: " + username)
+
+	// Получение данных из БД
+	var role string
+	err = Db.QueryRow("SELECT role FROM users WHERE username = $1", username).Scan(&role)
+	if err == sql.ErrNoRows {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if role != "teacher" {
+		log.Println("Неправильные данные")
+		sendError(w, "Неправильные данные", http.StatusUnauthorized)
+		return
+	}
+
+	// Проверка пройдена
+
+	_, err = Db.Exec("DELETE FROM users_courses WHERE id_course = $1", data.Id)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = Db.Exec("DELETE FROM groups_courses WHERE id_course = $1", data.Id)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = Db.Exec("DELETE FROM courses WHERE id_course = $1", data.Id)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
 // Добавление группы через админ панель
 func addGroup(w http.ResponseWriter, r *http.Request) {
 	log.Println("Получен запрос на добавление группы через админ панель")
@@ -1435,6 +1682,8 @@ func main() {
 	r.HandleFunc("/api/gettestsdata", getTestsData)
 	r.HandleFunc("/api/getcoursedata/{name}", getCourseData)
 	r.HandleFunc("/api/getviewdata/{name}", getViewData)
+	r.HandleFunc("/api/createcourse", handleCreateCourse)
+	r.HandleFunc("/api/deletecourse", handleDeleteCourse)
 
 	r.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	r.HandleFunc("/api/admin/adduser", addUser)

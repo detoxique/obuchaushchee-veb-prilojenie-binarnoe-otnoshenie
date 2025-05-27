@@ -55,6 +55,20 @@ th {
     font-size: 14px;
 }
 
+tr {
+    transition: all 0.3s ease;
+}
+
+tr.new-course {
+    background-color: #e8ffe8;
+    animation: highlightRow 2s ease-out;
+}
+
+@keyframes highlightRow {
+    from { background-color: #e8ffe8; }
+    to { background-color: transparent; }
+}
+
 td {
     color: #333333;
     font-size: 14px;
@@ -111,7 +125,7 @@ textarea {
     box-sizing: border-box;
 }
 
-input[type="name"], input[type="desc"] {
+.addform input[type="text"], input[type="desc"] {
     margin-left: 24px;
     display: block;
     width: 50%;
@@ -131,13 +145,6 @@ select[type="group"] {
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
-}
-
-button[type="mybutton"] {
-    display: block;
-    margin-left: 24px;
-    margin-top: 5px;
-    margin-bottom: 24px;
 }
 
 .file-list {
@@ -203,5 +210,158 @@ button[type="mybutton"] {
 }
 
 input[type="file"] {
-            display: none;
-        }
+    display: none;
+}
+
+.course-search {
+    
+    display: flex;
+    align-items: center;
+}
+
+.course-search input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+.course-search button {
+    background-color: #ddd;
+    color: #333;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Стили для модальных окон */
+.modal-content {
+    border-radius: 12px;
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.list-group-item {
+    transition: background-color 0.2s;
+}
+
+/* Улучшенные стили для бейджей тестов */
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    padding: 0.5em 0.75em;
+    border-radius: 20px;
+}
+
+.dropdown-group {
+    position: relative;
+    width: 50%;
+    
+    margin-bottom: 10px;
+}
+
+.search-group-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button[type="button"] {
+    display:block;
+    margin-left: 24px;
+    margin-bottom: 24px;
+}
+
+.dropdown-group-content {
+    display: none; /* Скрыто по умолчанию */
+    position: absolute;
+    margin-left: 24px;
+    width: 50%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    z-index: 1000; /* Важно: должен быть выше других элементов */
+}
+
+/* При активации */
+.dropdown-group-content.show {
+    display: block !important;
+}
+
+.dropdown-group-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.dropdown-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.selected-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-left: 24px;
+    margin-bottom: 10px;
+}
+
+/* Стили для бейджа группы */
+.selected-groups .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    height: 40px;
+}
+
+/* Кнопка закрытия */
+.selected-groups .btn-close {
+    margin-top: 25px;
+    margin-left: 8px;
+    padding: 0.5rem;
+    font-size: 0.7em;
+    
+    opacity: 0.8;
+}
+
+.selected-groups .btn-close:hover {
+    opacity: 1;
+}
+
+button.btn-primary[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.75s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Адаптивные стили для модального окна */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: 8px;
+    }
+}

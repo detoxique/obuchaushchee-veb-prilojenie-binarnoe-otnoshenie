@@ -51,6 +51,7 @@ type Course struct {
 }
 
 type File struct {
+	Id         int       `json:"Id"`
 	Name       string    `json:"Name"`
 	UploadDate time.Time `json:"UploadDate"`
 	Filename   string    `json:"Filename"`
