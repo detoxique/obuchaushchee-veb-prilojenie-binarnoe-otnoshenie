@@ -1375,6 +1375,8 @@ func HandleUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ограничиваем размер файла
+	r.Body = http.MaxBytesReader(w, r.Body, 128)
 }
 
 func HandleCreateCourse(w http.ResponseWriter, r *http.Request) {
