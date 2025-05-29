@@ -31,6 +31,9 @@ func Run(ctx context.Context) error {
 	}
 
 	// HTML
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	r.PathPrefix("/test/static/").Handler(http.StripPrefix("/test/static/", http.FileServer(http.Dir("./static"))))
+
 	r.HandleFunc("/", handlers.ServeLoginPage)
 	r.HandleFunc("/profile", handlers.ServeProfilePage)
 	r.HandleFunc("/marks", handlers.ServeMarksPage)
@@ -38,12 +41,11 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/courses", handlers.ServeCoursesPage)
 	r.HandleFunc("/teachercourses", handlers.ServeTeacherCoursesPage)
 	r.HandleFunc("/notifications", handlers.ServeNotificationsPage)
+	r.HandleFunc("/trainer", handlers.ServeTrainerPage)
 	r.HandleFunc("/course/{name}", handlers.ServeCoursePage)
 	r.HandleFunc("/view/{name}", handlers.ServeViewPage)
-	r.HandleFunc("/trainer", handlers.ServeTrainerPage)
 	r.HandleFunc("/test/create/{id}", handlers.ServeCreateTestPage)
-
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	r.HandleFunc("/test/create/{id}/", handlers.ServeCreateTestPage)
 
 	// API
 	r.HandleFunc("/api/login", handlers.HandleLogin)
@@ -63,6 +65,7 @@ func Run(ctx context.Context) error {
 	r.HandleFunc("/api/uploadfile", handlers.HandleUploadFile)
 	r.HandleFunc("/api/createcourse", handlers.HandleCreateCourse)
 	r.HandleFunc("/api/deletecourse", handlers.HandleDeleteCourse)
+	r.HandleFunc("/api/backup", handlers.HandleBackup)
 
 	r.HandleFunc("/api/admin/adduser", handlers.HandleAddUser)
 	r.HandleFunc("/api/admin/deleteuser", handlers.HandleDeleteUser)

@@ -1,82 +1,568 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-
-        <title>Образовательная платформа</title>
-        <link rel="stylesheet" href="../static/css/trainer.css">
-
-        <!-- Bootstrap CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тренажер бинарных отношений</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8f9fa;
+    }
     
+    /* Стили из marks.css */
+    .container-fluid a {
+      font-size: 20px;
+      white-space: nowrap;
+      font-family: "Inter", sans-serif;
+      font-weight: 600;
+    }
+    
+    .nav-item a {
+      font-weight: 400;
+      font-size: 18px;
+    }
+    
+    .round {
+      border-radius: 20px;
+    }
+    
+    .show-notifications {
+      margin-right: 24px;
+    }
+    
+    .container-md h2 {
+      font-family: "Inter", sans-serif;
+      font-weight: 600;
+      font-size: 24px;
+      margin-top: 24px;
+    }
+    
+    .container-md h3 {
+      font-family: "Inter", sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      color: #777;
+    }
+    
+    .card {
+      border-radius: 8px;
+      border: 1px solid #bbbbbb;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+      background-color: #fff;
+      border-bottom: 1px solid #bbbbbb;
+    }
+    
+    /* Стили тренажера */
+    #relation-matrix {
+      margin-right: 20px;
+      border: 1px solid #dee2e6;
+      border-collapse: collapse;
+      background-color: white;
+    }
+    
+    #relation-matrix th, #relation-matrix td {
+      border: 1px solid #dee2e6;
+      padding: 10px;
+      text-align: center;
+      min-width: 40px;
+      cursor: pointer;
+    }
+    
+    #relation-matrix th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+    
+    #graph-container {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #dee2e6;
+      position: relative;
+      background-color: white;
+      border-radius: 8px;
+    }
+    
+    .node {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #0d6efd;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    
+    .arrow {
+      position: absolute;
+      background-color: #333;
+      height: 3px;
+      transform-origin: 0 0;
+      z-index: 5;
+    }
+    
+    .arrow-head {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 5px 0 5px 8px;
+      border-color: transparent transparent transparent #333;
+      z-index: 5;
+    }
+    
+    .property-card {
+      height: 100%;
+    }
+    
+    .property-result {
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    
+    .yes {
+      background-color: #d1e7dd;
+      color: #0f5132;
+    }
+    
+    .no {
+      background-color: #f8d7da;
+      color: #842029;
+    }
+    
+    .controls-card {
+      background-color: #f8f9fa;
+    }
+    
+    .matrix-card {
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Навигационное меню из marks.html -->
+  <nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/profile">Образовательная платформа</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-    </head>
-    <body>
-        <script src="../static/js/trainer.js"></script>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="/courses">Курсы</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/marks">Успеваемость</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="#">Тренажер</a>
+          </li>
+        </ul>
 
-        <nav class="navbar navbar-expand-lg bg-body-tertiary">
-            <div class="container-fluid">
-              <a class="navbar-brand" href="/profile">Образовательная платформа</a>
-              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-              </button>
-
-              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item">
-                    <a class="nav-link" href="/courses">Курсы</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/marks">Успеваемость</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/trainer">Тренажер</a>
-                </li>
-              </ul>
-
-              <div class="show-notifications">
-                <div class="d-flex" id="navbarSupportedContent" type="button">
-                    <img src="../static/img/notification-has.svg" alt="" class="round" href="/notifications" width="40" height="40" onclick="gotonotifications()">
-                </div>
-              </div>
-
-              <div class="profile-button">
-                <div class="d-flex" id="navbarSupportedContent" type="button">
-                    <img src="../static/img/profile-student40x40.jpg" alt="" class="round" href="/profile" onclick="handleRedirect()">
-                </div>
-              </div>
-            </div>
-        </nav>
-
-        <div class="container-md">
-            <h2>Тренажер</h2>
-
-            <div class="trainer">
-                <div class="row">
-                    <div class="col-md-8">
-                        <canvas id="relationCanvas" width="600" height="400"></canvas>
-                    </div>
-                    <div class="col-md-4 controls">
-                        <div class="mb-3">
-                            <input type="text" id="elementName" class="form-control" placeholder="Имя элемента">
-                            <button class="btn btn-primary mt-2" onclick="addElement()">Добавить элемент</button>
-                            <button class="btn btn-danger mt-2" onclick="removeSelected()">Удалить выбранное</button>
-                        </div>
-                        <div class="mb-3">
-                            <button class="btn btn-success" onclick="checkReflexivity()">Рефлексивность</button>
-                            <button class="btn btn-success" onclick="checkSymmetry()">Симметричность</button>
-                            <button class="btn btn-success" onclick="checkTransitivity()">Транзитивность</button>
-                        </div>
-                        <div id="propertyResult" class="alert"></div>
-                    </div>
-                </div>
-            </div>
+        <div class="show-notifications">
+          <div class="d-flex" id="navbarSupportedContent" type="button">
+            <img src="../static/img/notification-has.svg" alt="Уведомления" class="round" width="40" height="40">
+          </div>
         </div>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    </body>
+        <div class="profile-button">
+          <div class="d-flex" id="navbarSupportedContent" type="button">
+            <img src="../static/img/profile-student40x40.jpg" alt="Профиль" class="round" width="40" height="40">
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-md my-4">
+    <h1 class="mb-4">Тренажер бинарных отношений</h1>
+    
+    <!-- Управление -->
+    <div class="card controls-card mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center">
+          <label for="set-size" class="me-2 mb-2">Размер множества:</label>
+          <input type="number" id="set-size" min="2" max="6" value="3" class="form-control me-3 mb-2" style="width: 80px;">
+          <button id="generate-button" class="btn btn-primary mb-2">Сгенерировать</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="row">
+      <!-- Матрица отношения -->
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header">
+            <h2 class="h5 mb-0">Матрица отношения</h2>
+          </div>
+          <div class="card-body matrix-card">
+            <div class="table-responsive">
+              <table id="relation-matrix" class="table-bordered"></table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Граф отношения -->
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header">
+            <h2 class="h5 mb-0">Граф отношения</h2>
+          </div>
+          <div class="card-body">
+            <div id="graph-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Свойства отношения -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="h5 mb-0">Свойства отношения</h2>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Рефлексивность:</span>
+                  <span id="reflexive" class="property-result"></span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Антирефлексивность:</span>
+                  <span id="antireflexive" class="property-result"></span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Симметричность:</span>
+                  <span id="symmetric" class="property-result"></span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Антисимметричность:</span>
+                  <span id="antisymmetric" class="property-result"></span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="d-flex justify-content-between">
+                  <span>Транзитивность:</span>
+                  <span id="transitive" class="property-result"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+  <script>
+    const setSizeInput = document.getElementById("set-size");
+    const generateButton = document.getElementById("generate-button");
+    const relationMatrixTable = document.getElementById("relation-matrix");
+    const reflexiveSpan = document.getElementById("reflexive");
+    const antireflexiveSpan = document.getElementById("antireflexive");
+    const symmetricSpan = document.getElementById("symmetric");
+    const antisymmetricSpan = document.getElementById("antisymmetric");
+    const transitiveSpan = document.getElementById("transitive");
+    const graphContainer = document.getElementById("graph-container");
+
+    let setSize = parseInt(setSizeInput.value);
+    let relationMatrix = [];
+    let nodePositions = [];
+
+    generateButton.addEventListener("click", generateMatrix);
+    setSizeInput.addEventListener("change", () => {
+      setSize = parseInt(setSizeInput.value);
+      generateMatrix();
+    });
+
+    function generateMatrix() {
+      relationMatrix = [];
+      for (let i = 0; i < setSize; i++) {
+        relationMatrix[i] = [];
+        for (let j = 0; j < setSize; j++) {
+          relationMatrix[i][j] = Math.random() < 0.5 ? 1 : 0;
+        }
+      }
+
+      renderMatrix();
+      renderGraph();
+      checkProperties();
+    }
+
+    function renderMatrix() {
+      relationMatrixTable.innerHTML = "";
+
+      // Create header row
+      let headerRow = document.createElement("tr");
+      let emptyHeader = document.createElement("th");
+      headerRow.appendChild(emptyHeader);
+
+      for (let i = 0; i < setSize; i++) {
+        let th = document.createElement("th");
+        th.textContent = i + 1;
+        headerRow.appendChild(th);
+      }
+      relationMatrixTable.appendChild(headerRow);
+
+      for (let i = 0; i < setSize; i++) {
+        let row = document.createElement("tr");
+        let rowHeader = document.createElement("th");
+        rowHeader.textContent = i + 1;
+        row.appendChild(rowHeader);
+
+        for (let j = 0; j < setSize; j++) {
+          let cell = document.createElement("td");
+          cell.textContent = relationMatrix[i][j];
+          cell.addEventListener("click", () => {
+            relationMatrix[i][j] = 1 - relationMatrix[i][j];
+            cell.textContent = relationMatrix[i][j];
+            renderGraph();
+            checkProperties();
+          });
+          row.appendChild(cell);
+        }
+        relationMatrixTable.appendChild(row);
+      }
+    }
+
+    function renderGraph() {
+      graphContainer.innerHTML = "";
+      nodePositions = [];
+
+      // Получаем реальные размеры контейнера
+      const width = graphContainer.clientWidth;
+      const height = graphContainer.clientHeight;
+      
+      const radius = Math.min(width, height) / 2 - 30;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      // Создаем узлы
+      for (let i = 0; i < setSize; i++) {
+        const angle = 2 * Math.PI * i / setSize - Math.PI / 2; // Смещение на 90 градусов
+        const x = centerX + radius * Math.cos(angle) - 20;
+        const y = centerY + radius * Math.sin(angle) - 20;
+
+        nodePositions.push({ x: x + 20, y: y + 20 });
+
+        const node = document.createElement("div");
+        node.classList.add("node");
+        node.textContent = i + 1;
+        node.style.left = x + "px";
+        node.style.top = y + "px";
+        graphContainer.appendChild(node);
+      }
+
+      // Рисуем связи
+      for (let i = 0; i < setSize; i++) {
+        for (let j = 0; j < setSize; j++) {
+          if (relationMatrix[i][j] === 1) {
+            if (i === j) {
+              drawLoop(nodePositions[i]);
+            } else {
+              drawArrow(nodePositions[i], nodePositions[j]);
+            }
+          }
+        }
+      }
+    }
+
+    function drawArrow(start, end) {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+
+        // Радиус узла, чтобы стрелка не заходила внутрь круга
+        const nodeRadius = 20;
+
+        // Смещаем начальную и конечную точки
+        const startX = start.x + (dx / length) * nodeRadius;
+        const startY = start.y + (dy / length) * nodeRadius;
+        const endX = end.x - (dx / length) * nodeRadius;
+        const endY = end.y - (dy / length) * nodeRadius;
+
+        // Пересчитываем длину и угол с учетом смещений
+        const adjDx = endX - startX;
+        const adjDy = endY - startY;
+        const adjLength = Math.sqrt(adjDx * adjDx + adjDy * adjDy);
+        const adjAngle = Math.atan2(adjDy, adjDx) * 180 / Math.PI;
+
+        // Создаем линию стрелки
+        const arrow = document.createElement("div");
+        arrow.classList.add("arrow");
+        arrow.style.position = "absolute";
+        arrow.style.width = adjLength + "px";
+        arrow.style.height = "2px";
+        arrow.style.backgroundColor = "black";
+        arrow.style.left = startX + "px";
+        arrow.style.top = startY + "px";
+        arrow.style.transformOrigin = "0 0";
+        arrow.style.transform = `rotate(${adjAngle}deg)`;
+        graphContainer.appendChild(arrow);
+
+        // Создаем наконечник стрелки
+        const arrowHead = document.createElement("div");
+        arrowHead.classList.add("arrow-head");
+        arrowHead.style.position = "absolute";
+
+        // Размеры наконечника
+        const headWidth = 10;  // ширина треугольника
+        const headHeight = 14; // высота треугольника
+
+        // Устанавливаем бордеры для треугольника (стрелочного наконечника)
+        arrowHead.style.width = "0";
+        arrowHead.style.height = "0";
+        arrowHead.style.borderLeft = `${headWidth}px solid black`;
+        arrowHead.style.borderTop = `${headHeight / 2}px solid transparent`;
+        arrowHead.style.borderBottom = `${headHeight / 2}px solid transparent`;
+
+        // Позиционируем наконечник так, чтобы его "острый угол" совпадал с концом линии
+        // Т.к. острый угол находится в левом верхнем углу блока, смещаем его на высоту/2 по вертикали
+        arrowHead.style.left = (endX - headWidth / 2) + "px";
+        arrowHead.style.top = (endY - headHeight / 2) + "px";
+
+        // Вращаем наконечник
+        arrowHead.style.transform = `rotate(${adjAngle}deg)`;
+        arrowHead.style.transformOrigin = `center center`;
+
+        graphContainer.appendChild(arrowHead);
+    }
+
+
+
+    // Функция для рисования петли (связь элемента с собой)
+    function drawLoop(position) {
+      // Создаем петлю (круг)
+      const loop = document.createElement("div");
+      loop.classList.add("loop");
+      loop.style.width = "30px";
+      loop.style.height = "30px";
+      loop.style.left = (position.x - 15) + "px";
+      loop.style.top = (position.y - 45) + "px";
+      graphContainer.appendChild(loop);
+      
+      // Создаем наконечник для петли
+      const loopArrow = document.createElement("div");
+      loopArrow.classList.add("loop-arrow");
+      loopArrow.style.left = (position.x - 5) + "px";
+      loopArrow.style.top = (position.y - 25) + "px";
+      loopArrow.style.transform = "rotate(60deg)";
+      graphContainer.appendChild(loopArrow);
+    }
+
+    function checkProperties() {
+      setPropertyResult(reflexiveSpan, isReflexive());
+      setPropertyResult(antireflexiveSpan, isAntireflexive());
+      setPropertyResult(symmetricSpan, isSymmetric());
+      setPropertyResult(antisymmetricSpan, isAntisymmetric());
+      setPropertyResult(transitiveSpan, isTransitive());
+    }
+
+    function setPropertyResult(element, result) {
+      element.textContent = result ? "Да" : "Нет";
+      element.className = "property-result " + (result ? "yes" : "no");
+    }
+
+    function isReflexive() {
+      for (let i = 0; i < setSize; i++) {
+        if (relationMatrix[i][i] !== 1) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function isAntireflexive() {
+      for (let i = 0; i < setSize; i++) {
+        if (relationMatrix[i][i] !== 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function isSymmetric() {
+      for (let i = 0; i < setSize; i++) {
+        for (let j = i + 1; j < setSize; j++) {
+          if (relationMatrix[i][j] !== relationMatrix[j][i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function isAntisymmetric() {
+      for (let i = 0; i < setSize; i++) {
+        for (let j = i + 1; j < setSize; j++) {
+          if (relationMatrix[i][j] === 1 && relationMatrix[j][i] === 1) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function isTransitive() {
+      for (let i = 0; i < setSize; i++) {
+        for (let j = 0; j < setSize; j++) {
+          if (relationMatrix[i][j] === 1) {
+            for (let k = 0; k < setSize; k++) {
+              if (relationMatrix[j][k] === 1 && relationMatrix[i][k] !== 1) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    // Обработчик изменения размеров окна
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        renderGraph();
+      }, 200);
+    });
+
+    // Initial generation
+    generateMatrix();
+  </script>
+</body>
 </html>

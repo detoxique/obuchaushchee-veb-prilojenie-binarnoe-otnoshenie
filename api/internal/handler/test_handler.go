@@ -182,6 +182,7 @@ func (h *TestHandler) FinishAttempt(w http.ResponseWriter, r *http.Request) {
 func (h *TestHandler) CreateTest(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Println("Ошибка " + err.Error())
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -194,6 +195,7 @@ func (h *TestHandler) CreateTest(w http.ResponseWriter, r *http.Request) {
 
 	test, err := h.service.CreateTest(r.Context(), &req)
 	if err != nil {
+		log.Println("Ошибка " + err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

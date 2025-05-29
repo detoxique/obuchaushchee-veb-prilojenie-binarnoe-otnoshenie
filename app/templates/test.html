@@ -3,453 +3,632 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создание нового теста</title>
+    <title>Создание теста | Образовательная платформа</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #6c757d;
+            --success-color: #1cc88a;
+            --danger-color: #e74a3b;
+            --light-bg: #f8f9fc;
+            --border-color: #e3e6f0;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
             color: #333;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f9f9f9;
+        
+        /* Стили из marks.css */
+        .container-fluid a {
+            font-size: 20px;
+            white-space: nowrap;
+            font-family: "Inter", sans-serif;
+            font-weight: 600;
+        }
+        
+        .nav-item a {
+            font-weight: 400;
+            font-size: 18px;
+        }
+        
+        .round {
+            border-radius: 20px;
+        }
+        
+        .show-notifications {
+            margin-right: 24px;
+        }
+        
+        .container-md h2 {
+            font-family: "Inter", sans-serif;
+            font-weight: 600;
+            font-size: 24px;
+            margin-top: 24px;
+        }
+        
+        .container-md h3 {
+            font-family: "Inter", sans-serif;
+            font-weight: 400;
+            font-size: 14px;
+            color: #777;
+        }
+        
+        /* Стили для формы создания теста */
+        .test-card {
+            background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: 1px solid #bbbbbb;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 25px;
+            padding: 20px;
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        .form-group {
+        
+        .test-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
             margin-bottom: 20px;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="text"],
-        input[type="number"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea {
-            min-height: 80px;
-        }
-        .question-block {
-            background: #fff;
-            padding: 15px;
-            border-radius: 5px;
+        
+        .question-card {
+            background-color: var(--light-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
             margin-bottom: 20px;
-            border: 1px solid #eee;
+            padding: 20px;
+            position: relative;
         }
+        
         .option-item {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
+            padding: 8px 10px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
         }
+        
         .option-item input[type="text"] {
             flex-grow: 1;
-            margin-right: 10px;
-        }
-        .matching-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .matching-item select {
-            width: auto;
             margin: 0 10px;
         }
-        .btn {
-            background: #3498db;
+        
+        .btn-add {
+            background-color: var(--success-color);
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 6px 12px;
             border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .btn:hover {
-            background: #2980b9;
-        }
-        .btn-danger {
-            background: #e74c3c;
-        }
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-        .btn-success {
-            background: #2ecc71;
-        }
-        .btn-success:hover {
-            background: #27ae60;
-        }
-        .btn-small {
-            padding: 5px 10px;
             font-size: 14px;
-        }
-        .actions {
             display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
+            align-items: center;
         }
-        .hidden {
-            display: none;
+        
+        .btn-remove {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .question-type-badge {
+            position: absolute;
+            top: 15px;
+            right: 100px;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        
+        .points-input {
+            width: 80px;
+        }
+        
+        .position-input {
+            width: 60px;
+        }
+        
+        .btn-submit {
+            background-color: var(--primary-color);
+            padding: 10px 25px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .drag-handle {
+            cursor: move;
+            margin-right: 10px;
+            color: var(--secondary-color);
+        }
+        
+        .question-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .question-number {
+            background-color: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .course-id-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background-color: #6f42c1;
+            color: white;
+        }
+        
+        .token-info {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .date-info {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Создание нового теста</h1>
-        <form id="testForm" action="/api/tests" method="POST">
-            <div class="form-group">
-                <label for="testName">Название теста:</label>
-                <input type="text" id="testName" name="name" required>
-            </div>
+    <!-- Навигационное меню из marks.html -->
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/profile">Образовательная платформа</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-            <div class="form-group">
-                <label for="courseId">ID курса:</label>
-                <input type="number" id="courseId" name="id_course" required>
-            </div>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teachercourses">Курсы</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/marks">Успеваемость</a>
+                    </li>
+                </ul>
 
-            <div class="form-group">
-                <label for="endsDate">Дата окончания:</label>
-                <input type="date" id="endsDate" name="ends_date" required>
+                <div class="profile-button">
+                    <div class="d-flex" id="navbarSupportedContent" type="button">
+                        <img src="../static/img/profile-teacher40x40.jpg" alt="Профиль" class="round" width="40" height="40">
+                    </div>
+                </div>
             </div>
+        </div>
+    </nav>
 
-            <div class="form-group">
-                <label for="duration">Длительность (минут):</label>
-                <input type="number" id="duration" name="duration" min="1" required>
+    <div class="container-md my-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Создание теста</h1>
+            <button id="submit-test" class="btn btn-primary btn-submit">Сохранить тест</button>
+        </div>
+
+        <!-- Основная информация о тесте -->
+        <div class="test-card">
+            <div class="test-header">
+                <h2 class="h4">Основная информация</h2>
             </div>
-
-            <div class="form-group">
-                <label for="attempts">Количество попыток:</label>
-                <input type="number" id="attempts" name="attempts" min="1" required>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="test-title" class="form-label">Название теста</label>
+                    <input type="text" class="form-control" id="test-title" placeholder="Введите название теста" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="duration" class="form-label">Продолжительность (минут)</label>
+                    <input type="number" class="form-control" id="duration" min="1" value="30" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="attempts" class="form-label">Количество попыток</label>
+                    <input type="number" class="form-control" id="attempts" min="1" value="3" required>
+                </div>
             </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="end-date" class="form-label">Дата завершения</label>
+                    <input type="datetime-local" class="form-control" id="end-date" required>
+                </div>
+            </div>
+        </div>
 
+        <!-- Секция вопросов -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Вопросы теста</h2>
-            <div id="questionsContainer">
-                <!-- Вопросы будут добавляться здесь -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Добавить вопрос
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" data-type="single_choice">С одним правильным ответом</a></li>
+                    <li><a class="dropdown-item" href="#" data-type="multiple_choice">С несколькими правильными ответами</a></li>
+                    <li><a class="dropdown-item" href="#" data-type="text">Открытый вопрос</a></li>
+                    <li><a class="dropdown-item" href="#" data-type="matching">На сопоставление</a></li>
+                </ul>
             </div>
+        </div>
 
-            <div class="actions">
-                <button type="button" id="addQuestionBtn" class="btn btn-success">Добавить вопрос</button>
-                <button type="submit" class="btn">Сохранить тест</button>
-            </div>
-        </form>
+        <!-- Контейнер для вопросов -->
+        <div id="questions-container">
+            <!-- Вопросы будут добавляться сюда динамически -->
+        </div>
     </div>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    <!-- Скрипт для работы с формой -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const questionsContainer = document.getElementById('questionsContainer');
-            const addQuestionBtn = document.getElementById('addQuestionBtn');
-            let questionCounter = 0;
+        // Получение ID курса из URL
+        const getCourseIdFromUrl = () => {
+            const pathParts = window.location.pathname.split('/');
+            const idIndex = pathParts.indexOf('create') + 1;
+            return idIndex < pathParts.length ? pathParts[idIndex] : null;
+        };
 
-            // Добавление нового вопроса
-            addQuestionBtn.addEventListener('click', function() {
-                questionCounter++;
-                const questionId = `question_${questionCounter}`;
-                
-                const questionBlock = document.createElement('div');
-                questionBlock.className = 'question-block';
-                questionBlock.innerHTML = `
-                    <div class="form-group">
-                        <label for="${questionId}_text">Текст вопроса:</label>
-                        <textarea id="${questionId}_text" name="questions[${questionCounter}][text]" required></textarea>
-                    </div>
+        // Получение токена из LocalStorage
+        const getTokenFromLocalStorage = () => {
+            return localStorage.getItem('access_token') || '';
+        };
 
-                    <div class="form-group">
-                        <label for="${questionId}_type">Тип вопроса:</label>
-                        <select id="${questionId}_type" name="questions[${questionCounter}][type]" class="question-type" required>
-                            <option value="single_choice">Одиночный выбор</option>
-                            <option value="multiple_choice">Множественный выбор</option>
-                            <option value="text">Текстовый ответ</option>
-                            <option value="matching">Сопоставление</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="${questionId}_points">Баллы за вопрос:</label>
-                        <input type="number" id="${questionId}_points" name="questions[${questionCounter}][points]" min="1" value="1" required>
-                    </div>
-
-                    <!-- Контейнер для вариантов ответов (одиночный/множественный выбор) -->
-                    <div class="form-group options-container" id="${questionId}_options">
-                        <label>Варианты ответов:</label>
-                        <div class="option-list">
-                            <div class="option-item">
-                                <input type="text" name="questions[${questionCounter}][options][0][text]" placeholder="Текст варианта" required>
-                                <input type="checkbox" name="questions[${questionCounter}][options][0][is_correct]">
-                                <label>Правильный</label>
-                                <button type="button" class="btn btn-small btn-danger remove-option">×</button>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-small add-option">Добавить вариант</button>
-                    </div>
-
-                    <!-- Контейнер для сопоставления -->
-                    <div class="form-group matching-container hidden" id="${questionId}_matching">
-                        <label>Пары для сопоставления:</label>
-                        <div class="matching-pairs">
-                            <div class="matching-item">
-                                <input type="text" name="questions[${questionCounter}][left_items][0]" placeholder="Левое значение" required>
-                                <span>соответствует</span>
-                                <select name="questions[${questionCounter}][right_items][0]" required>
-                                    <option value="">Выберите</option>
-                                </select>
-                                <button type="button" class="btn btn-small btn-danger remove-matching">×</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Варианты для правой колонки:</label>
-                            <div class="right-options">
-                                <input type="text" class="right-option-input" placeholder="Вариант ответа">
-                                <button type="button" class="btn btn-small add-right-option">Добавить</button>
-                            </div>
-                            <div class="right-options-list"></div>
-                        </div>
-                        <button type="button" class="btn btn-small add-matching">Добавить пару</button>
-                    </div>
-
-                    <div class="form-group">
-                        <button type="button" class="btn btn-danger remove-question">Удалить вопрос</button>
-                    </div>
-                `;
-
-                questionsContainer.appendChild(questionBlock);
-
-                // Элементы вопроса
-                const questionType = questionBlock.querySelector('.question-type');
-                const optionsContainer = questionBlock.querySelector('.options-container');
-                const matchingContainer = questionBlock.querySelector('.matching-container');
-                const rightOptionsList = questionBlock.querySelector('.right-options-list');
-                let rightOptions = [];
-
-                // Обработчик изменения типа вопроса
-                questionType.addEventListener('change', function() {
-                    if (this.value === 'text') {
-                        optionsContainer.classList.add('hidden');
-                        matchingContainer.classList.add('hidden');
-                    } else if (this.value === 'matching') {
-                        optionsContainer.classList.add('hidden');
-                        matchingContainer.classList.remove('hidden');
-                    } else {
-                        optionsContainer.classList.remove('hidden');
-                        matchingContainer.classList.add('hidden');
-                        
-                        // Обновляем тип input для правильного ответа
-                        const correctInputs = questionBlock.querySelectorAll('[name$="[is_correct]"]');
-                        correctInputs.forEach(input => {
-                            input.type = this.value === 'multiple_choice' ? 'checkbox' : 'radio';
-                            input.name = this.value === 'multiple_choice' 
-                                ? `questions[${questionCounter}][options][${input.dataset.index}][is_correct]`
-                                : `questions[${questionCounter}][correct_option]`;
-                        });
-                    }
-                });
-
-                // Добавление варианта ответа (для одиночного/множественного выбора)
-                questionBlock.querySelector('.add-option').addEventListener('click', function() {
-                    const optionList = this.previousElementSibling;
-                    const optionCount = optionList.children.length;
-                    
-                    const optionItem = document.createElement('div');
-                    optionItem.className = 'option-item';
-                    optionItem.innerHTML = `
-                        <input type="text" name="questions[${questionCounter}][options][${optionCount}][text]" placeholder="Текст варианта" required>
-                        <input type="${questionType.value === 'multiple_choice' ? 'checkbox' : 'radio'}" 
-                               name="${questionType.value === 'multiple_choice' 
-                                    ? `questions[${questionCounter}][options][${optionCount}][is_correct]` 
-                                    : `questions[${questionCounter}][correct_option]`}"
-                               value="${optionCount}">
-                        <label>${questionType.value === 'multiple_choice' ? 'Правильный' : 'Правильный (только один)'}</label>
-                        <button type="button" class="btn btn-small btn-danger remove-option">×</button>
-                    `;
-                    
-                    optionList.appendChild(optionItem);
-                });
-
-                // Удаление варианта ответа
-                questionBlock.querySelector('.option-list').addEventListener('click', function(e) {
-                    if (e.target.classList.contains('remove-option')) {
-                        e.target.closest('.option-item').remove();
-                    }
-                });
-
-                // Добавление варианта для правой колонки (сопоставление)
-                questionBlock.querySelector('.add-right-option').addEventListener('click', function() {
-                    const input = questionBlock.querySelector('.right-option-input');
-                    const value = input.value.trim();
-                    
-                    if (value) {
-                        rightOptions.push(value);
-                        updateRightOptions();
-                        input.value = '';
-                    }
-                });
-
-                // Обновление вариантов для правой колонки
-                function updateRightOptions() {
-                    rightOptionsList.innerHTML = '';
-                    rightOptions.forEach((option, index) => {
-                        const div = document.createElement('div');
-                        div.className = 'option-item';
-                        div.innerHTML = `
-                            <span>${option}</span>
-                            <button type="button" class="btn btn-small btn-danger remove-right-option" data-index="${index}">×</button>
-                        `;
-                        rightOptionsList.appendChild(div);
-                    });
-
-                    // Обновление select во всех парах
-                    const selects = questionBlock.querySelectorAll('.matching-pairs select');
-                    selects.forEach(select => {
-                        const selectedValue = select.value;
-                        select.innerHTML = '<option value="">Выберите</option>' + 
-                            rightOptions.map((opt, i) => 
-                                `<option value="${i}" ${selectedValue === String(i) ? 'selected' : ''}>${opt}</option>`
-                            ).join('');
-                    });
-                }
-
-                // Удаление варианта из правой колонки
-                rightOptionsList.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('remove-right-option')) {
-                        const index = parseInt(e.target.dataset.index);
-                        rightOptions.splice(index, 1);
-                        updateRightOptions();
-                    }
-                });
-
-                // Добавление пары сопоставления
-                questionBlock.querySelector('.add-matching').addEventListener('click', function() {
-                    if (rightOptions.length === 0) {
-                        alert('Добавьте варианты для правой колонки сначала!');
-                        return;
-                    }
-
-                    const pairsContainer = questionBlock.querySelector('.matching-pairs');
-                    const pairCount = pairsContainer.children.length;
-                    
-                    const pairItem = document.createElement('div');
-                    pairItem.className = 'matching-item';
-                    pairItem.innerHTML = `
-                        <input type="text" name="questions[${questionCounter}][left_items][${pairCount}]" placeholder="Левое значение" required>
-                        <span>соответствует</span>
-                        <select name="questions[${questionCounter}][right_items][${pairCount}]" required>
-                            <option value="">Выберите</option>
-                            ${rightOptions.map((opt, i) => `<option value="${i}">${opt}</option>`).join('')}
-                        </select>
-                        <button type="button" class="btn btn-small btn-danger remove-matching">×</button>
-                    `;
-                    
-                    pairsContainer.appendChild(pairItem);
-                });
-
-                // Удаление пары сопоставления
-                questionBlock.querySelector('.matching-pairs').addEventListener('click', function(e) {
-                    if (e.target.classList.contains('remove-matching')) {
-                        e.target.closest('.matching-item').remove();
-                    }
-                });
-
-                // Удаление вопроса
-                questionBlock.querySelector('.remove-question').addEventListener('click', function() {
-                    questionBlock.remove();
-                });
-            });
-
-            // Обработка отправки формы
-            document.getElementById('testForm').addEventListener('submit', function(e) {
+        // Установка даты завершения по умолчанию (через 7 дней)
+        const defaultEndDate = new Date();
+        defaultEndDate.setDate(defaultEndDate.getDate() + 7);
+        document.getElementById('end-date').value = formatDateTimeLocal(defaultEndDate);
+        
+        // Счетчик вопросов
+        let questionCounter = 1;
+        
+        // Отображение ID курса
+        const courseId = getCourseIdFromUrl();
+        
+        // Обработчики кнопок добавления вопросов
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Собираем данные формы
-                const formData = {
-                    name: this.elements.name.value,
-                    id_course: this.elements.id_course.value,
-                    ends_date: this.elements.ends_date.value,
-                    duration: this.elements.duration.value,
-                    attempts: this.elements.attempts.value,
-                    questions: []
-                };
-
-                // Собираем данные по каждому вопросу
-                document.querySelectorAll('.question-block').forEach((questionBlock, qIndex) => {
-                    const question = {
-                        text: questionBlock.querySelector('textarea').value,
-                        type: questionBlock.querySelector('.question-type').value,
-                        points: questionBlock.querySelector('input[type="number"]').value
-                    };
-
-                    if (question.type === 'matching') {
-                        // Обработка вопроса на сопоставление
-                        question.left_items = [];
-                        question.right_items = [];
-                        
-                        const leftInputs = questionBlock.querySelectorAll('.matching-item input[type="text"]');
-                        const rightSelects = questionBlock.querySelectorAll('.matching-item select');
-                        
-                        leftInputs.forEach((input, i) => {
-                            question.left_items.push(input.value);
-                            question.right_items.push(rightSelects[i].value);
-                        });
-                        
-                        question.right_options = [...rightOptions];
-                    } else if (question.type !== 'text') {
-                        // Обработка вопросов с вариантами ответов
-                        question.options = [];
-                        
-                        questionBlock.querySelectorAll('.option-item').forEach((optionItem, optIndex) => {
-                            const option = {
-                                text: optionItem.querySelector('input[type="text"]').value,
-                                is_correct: question.type === 'multiple_choice' 
-                                    ? optionItem.querySelector('input[type="checkbox"]').checked
-                                    : optionItem.querySelector('input[type="radio"]').checked
-                            };
-                            question.options.push(option);
-                        });
-                    }
-                    
-                    formData.questions.push(question);
-                });
-
-                // Отправка данных на сервер
-                fetch(this.action, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData),
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Ошибка сети');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    alert('Тест успешно создан! ID: ' + data.id);
-                    // Можно перенаправить на страницу редактирования или список тестов
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                    alert('Произошла ошибка при создании теста');
-                });
+                const type = this.getAttribute('data-type');
+                addQuestion(type);
             });
-
-            // Добавляем первый вопрос при загрузке
-            addQuestionBtn.click();
         });
+        
+        // Добавление нового вопроса
+        function addQuestion(type) {
+            const container = document.getElementById('questions-container');
+            const questionId = `question-${Date.now()}`;
+            
+            // Определение названия типа вопроса
+            let typeName = '';
+            switch(type) {
+                case 'single_choice': typeName = 'Один правильный ответ'; break;
+                case 'multiple_choice': typeName = 'Несколько правильных ответов'; break;
+                case 'text': typeName = 'Открытый вопрос'; break;
+                case 'matching': typeName = 'На сопоставление'; break;
+            }
+            
+            // Создание карточки вопроса
+            const questionCard = document.createElement('div');
+            questionCard.className = 'question-card';
+            questionCard.id = questionId;
+            questionCard.innerHTML = `
+                <div class="d-flex align-items-center mb-3">
+                    <div class="question-number">${questionCounter}</div>
+                    <h3 class="h5 mb-0">Новый вопрос</h3>
+                </div>
+                
+                <div class="question-actions">
+                    <span class="badge bg-primary question-type-badge">${typeName}</span>
+                    <button class="btn-remove" onclick="removeQuestion('${questionId}')">
+                        ×
+                    </button>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="question-text-${questionId}" class="form-label">Текст вопроса</label>
+                    <textarea class="form-control" id="question-text-${questionId}" rows="2" placeholder="Введите текст вопроса" required></textarea>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="points-${questionId}" class="form-label">Баллы</label>
+                        <input type="number" class="form-control points-input" id="points-${questionId}" min="1" value="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="position-${questionId}" class="form-label">Позиция</label>
+                        <input type="number" class="form-control position-input" id="position-${questionId}" min="1" value="${questionCounter}" required>
+                    </div>
+                </div>
+                
+                <div class="question-options" id="options-${questionId}">
+                    <!-- Варианты ответов будут добавляться сюда для соответствующих типов -->
+                </div>
+                
+                <div class="options-actions mt-3" id="actions-${questionId}">
+                    <!-- Кнопки добавления вариантов будут здесь -->
+                </div>
+            `;
+            
+            container.appendChild(questionCard);
+            
+            // Добавляем варианты ответов в зависимости от типа вопроса
+            switch(type) {
+                case 'single_choice':
+                case 'multiple_choice':
+                    addOption(questionId);
+                    addOption(questionId);
+                    addOptionActions(questionId);
+                    break;
+                case 'matching':
+                    addMatchingOption(questionId);
+                    addMatchingOption(questionId);
+                    addMatchingActions(questionId);
+                    break;
+            }
+            
+            questionCounter++;
+        }
+        
+        // Добавление варианта ответа
+        function addOption(questionId) {
+            const optionsContainer = document.getElementById(`options-${questionId}`);
+            const optionId = `option-${Date.now()}`;
+            const optionType = questionId.includes('single_choice') ? 'radio' : 'checkbox';
+            const optionName = `options-${questionId}`;
+            
+            const optionItem = document.createElement('div');
+            optionItem.className = 'option-item';
+            optionItem.innerHTML = `
+                <span class="drag-handle">↕</span>
+                <input type="${optionType}" name="${optionName}" class="is-correct">
+                <input type="text" class="form-control option-text" placeholder="Текст варианта ответа" required>
+                <input type="number" class="form-control position-input" placeholder="Поз." min="1" value="${optionsContainer.children.length + 1}" required>
+                <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            optionsContainer.appendChild(optionItem);
+        }
+        
+        // Добавление пары для сопоставления
+        function addMatchingOption(questionId) {
+            const optionsContainer = document.getElementById(`options-${questionId}`);
+            const optionId = `option-${Date.now()}`;
+            
+            const optionItem = document.createElement('div');
+            optionItem.className = 'option-item';
+            optionItem.innerHTML = `
+                <span class="drag-handle">↕</span>
+                <input type="text" class="form-control" placeholder="Левое значение" required>
+                <span class="mx-2">→</span>
+                <input type="text" class="form-control" placeholder="Правое значение" required>
+                <input type="number" class="form-control position-input" placeholder="Поз." min="1" value="${optionsContainer.children.length + 1}" required>
+                <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            optionsContainer.appendChild(optionItem);
+        }
+        
+        // Добавление кнопок для вопросов с вариантами
+        function addOptionActions(questionId) {
+            const actionsContainer = document.getElementById(`actions-${questionId}`);
+            actionsContainer.innerHTML = `
+                <button type="button" class="btn btn-add" onclick="addOption('${questionId}')">
+                    <span>+</span> Добавить вариант
+                </button>
+            `;
+        }
+        
+        // Добавление кнопок для вопросов на сопоставление
+        function addMatchingActions(questionId) {
+            const actionsContainer = document.getElementById(`actions-${questionId}`);
+            actionsContainer.innerHTML = `
+                <button type="button" class="btn btn-add" onclick="addMatchingOption('${questionId}')">
+                    <span>+</span> Добавить пару
+                </button>
+            `;
+        }
+        
+        // Удаление вопроса
+        function removeQuestion(questionId) {
+            document.getElementById(questionId).remove();
+            updateQuestionNumbers();
+        }
+        
+        // Обновление нумерации вопросов
+        function updateQuestionNumbers() {
+            const questions = document.querySelectorAll('.question-card');
+            questionCounter = 1;
+            
+            questions.forEach((question, index) => {
+                const numberElement = question.querySelector('.question-number');
+                if (numberElement) {
+                    numberElement.textContent = index + 1;
+                }
+                
+                const positionInput = question.querySelector('.position-input');
+                if (positionInput) {
+                    positionInput.value = index + 1;
+                }
+            });
+        }
+        
+        // Форматирование даты для input[type=datetime-local]
+        function formatDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        // Преобразование даты в формат для Golang (RFC3339)
+        function formatDateForGo(dateString) {
+            // Создаем объект Date из строки
+            const dateObj = new Date(dateString);
+            
+            // Проверяем валидность даты
+            if (isNaN(dateObj.getTime())) {
+                console.error('Некорректная дата:', dateString);
+                return null;
+            }
+            
+            // Преобразуем в формат ISO 8601 (RFC3339)
+            return dateObj.toISOString();
+        }
+        
+        // Отправка теста на сервер
+        document.getElementById('submit-test').addEventListener('click', function() {
+            const courseId = getCourseIdFromUrl();
+            const token = getTokenFromLocalStorage();
+            
+            if (!courseId) {
+                alert('Ошибка: ID курса не найден в URL');
+                return;
+            }
+            
+            if (!token) {
+                alert('Ошибка: Токен не найден в LocalStorage');
+                return;
+            }
+            
+            // Преобразуем дату в формат для Golang
+            const endDateInput = document.getElementById('end-date').value;
+            const endDateFormatted = formatDateForGo(endDateInput);
+            
+            if (!endDateFormatted) {
+                alert('Ошибка: Некорректная дата завершения');
+                return;
+            }
+            
+            // Собираем данные теста
+            const testData = {
+                token: token,
+                course_id: parseInt(courseId),
+                title: document.getElementById('test-title').value,
+                duration: parseInt(document.getElementById('duration').value) * 60, // конвертация в секунды
+                attempts: parseInt(document.getElementById('attempts').value),
+                end_date: endDateFormatted,
+                questions: []
+            };
+            
+            // Собираем данные вопросов
+            const questionCards = document.querySelectorAll('.question-card');
+            questionCards.forEach(card => {
+                const questionId = card.id;
+                
+                const question = {
+                    question_text: document.getElementById(`question-text-${questionId}`).value,
+                    question_type: getQuestionType(card),
+                    points: parseInt(document.getElementById(`points-${questionId}`).value),
+                    position: parseInt(document.getElementById(`position-${questionId}`).value),
+                    options: []
+                };
+                
+                // Собираем варианты ответов
+                const optionItems = card.querySelectorAll('.option-item');
+                optionItems.forEach((item, index) => {
+                    const inputs = item.querySelectorAll('input');
+                    
+                    // Для вопросов на сопоставление
+                    if (question.question_type === 'matching') {
+                        question.options.push({
+                            option_text: `${inputs[0].value}||${inputs[1].value}`,
+                            is_correct: true,
+                            position: parseInt(inputs[2].value)
+                        });
+                    } 
+                    // Для вопросов с выбором
+                    else {
+                        question.options.push({
+                            option_text: inputs[1].value,
+                            is_correct: inputs[0].checked,
+                            position: parseInt(inputs[2].value)
+                        });
+                    }
+                });
+                
+                testData.questions.push(question);
+            });
+            
+            // Логируем данные перед отправкой
+            console.log('Отправляемые данные:', testData);
+            
+            // Отправка данных на сервер
+            fetch('/api/tests', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(testData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Тест успешно сохранен!');
+                    return response.json();
+                } else {
+                    throw new Error('Ошибка сохранения теста');
+                }
+            })
+            .then(data => {
+                console.log('Ответ сервера:', data);
+                // Перенаправление на страницу курса или что-то еще
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при сохранении теста: ' + error.message);
+            });
+        });
+        
+        // Определение типа вопроса по содержимому карточки
+        function getQuestionType(card) {
+            const badge = card.querySelector('.question-type-badge');
+            if (!badge) return '';
+            
+            const typeText = badge.textContent.trim();
+            if (typeText === 'Один правильный ответ') return 'single_choice';
+            if (typeText === 'Несколько правильных ответов') return 'multiple_choice';
+            if (typeText === 'Открытый вопрос') return 'text';
+            if (typeText === 'На сопоставление') return 'matching';
+            return '';
+        }
+        
+        // Инициализация: добавляем первый вопрос
+        window.onload = function() {
+            addQuestion('single_choice');
+        };
     </script>
 </body>
 </html>

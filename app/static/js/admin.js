@@ -113,6 +113,40 @@ function logout() {
     window.location.href = 'http://localhost:9293/';
 }
 
+async function backup() {
+    try {
+    const response = await fetch('http://localhost:9293/api/backup');
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка сервера: ${response.status}`);
+    }
+    
+    // Получаем имя файла из Content-Disposition
+    const contentDisposition = response.headers.get('Content-Disposition');
+    const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+    const filename = filenameMatch ? filenameMatch[1] : `backup_${new Date().toISOString().slice(0, 19).replace(/[:T-]/g, '')}.zip`;
+    
+    // Создаем Blob и ссылку для скачивания
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Очистка
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    }, 100);
+  } catch (error) {
+    console.error('Ошибка при скачивании резервной копии:', error);
+    alert(`Ошибка: ${error.message}`);
+  }
+}
+
 // Нажатия кнопок
 document.addEventListener('click', function(event) {
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
@@ -123,7 +157,7 @@ document.addEventListener('click', function(event) {
         if (buttonId.startsWith('delete-idgroup-')) {
             const Id = buttonId.replace('delete-idgroup-', '');
             console.log('Нажата кнопка удаления группы, ID:', Id);
-            fetch('http://localhost:8080/api/admin/deletegroup', {
+            fetch('http://localhost:9293/api/admin/deletegroup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     </div>
                                                     <div>
                                                         <span class="badge bg-info">
-                                                            ${test.duration} мин
+                                                            ${(parseInt(test.duration) / 60)} мин
                                                         </span>
                                                     </div>
                                                 </div>
@@ -356,9 +356,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Обработка ответа
             if (response.ok) {
-                const newCourse = await response.json(); // Предполагаем, что сервер возвращает созданный курс
-                addCourseToTable(newCourse);
-                clearForm();
+                //const newCourse = await response.json(); // Предполагаем, что сервер возвращает созданный курс
+                location.reload();
             } else {
                 const error = await response.json();
                 alert(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);

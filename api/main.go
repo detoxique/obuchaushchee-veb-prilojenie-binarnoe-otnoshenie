@@ -328,7 +328,7 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
-	courses, err := GetUserCourses(Db, username)
+	courses, err := GetUserCourses(Db, username, false)
 	if err != nil {
 		log.Println("Внутренняя ошибка")
 		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -355,48 +355,100 @@ func getProfileData(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func GetUserCourses(db *sql.DB, username string) ([]models.Course, error) {
-	groupID, err := GetUserGroupID(db, username)
-	if err != nil {
-		return nil, fmt.Errorf("error getting user group: %v", err)
-	}
+func GetUserCourses(db *sql.DB, username string, isTeacher bool) ([]models.Course, error) {
+	if !isTeacher {
+		groupID, err := GetUserGroupID(db, username)
+		if err != nil {
+			return nil, fmt.Errorf("error getting user group: %v", err)
+		}
 
-	courseIDs, err := GetUserCourseIDs(db, groupID)
-	if err != nil {
-		return nil, fmt.Errorf("error getting course IDs: %v", err)
-	}
+		courseIDs, err := GetUserCourseIDs(db, groupID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting course IDs: %v", err)
+		}
 
-	if len(courseIDs) == 0 {
-		return []models.Course{}, nil
-	}
+		if len(courseIDs) == 0 {
+			return []models.Course{}, nil
+		}
 
-	courses, err := getCourses(db, courseIDs)
-	if err != nil {
-		return nil, err
-	}
+		courses, err := getCourses(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
 
-	filesMap, err := getFilesMap(db, courseIDs)
-	if err != nil {
-		return nil, err
-	}
+		filesMap, err := getFilesMap(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
 
-	testsMap, err := getTestsMap(db, courseIDs)
-	if err != nil {
-		return nil, err
-	}
+		testsMap, err := getTestsMap(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
 
-	for i := range courses {
-		courseID := courses[i].Id
-		courses[i].Files = getFromMap(filesMap, courseID)
-		courses[i].Tests = getFromMap(testsMap, courseID)
-	}
+		for i := range courses {
+			courseID := courses[i].Id
+			courses[i].Files = getFromMap(filesMap, courseID)
+			courses[i].Tests = getFromMap(testsMap, courseID)
+		}
+		return courses, nil
+	} else {
+		userID, err := GetUserID(db, username)
+		if err != nil {
+			return nil, fmt.Errorf("error getting user ID: %v", err)
+		}
 
-	return courses, nil
+		courseIDs, err := GetTeacherCourseIDs(db, userID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting course IDs: %v", err)
+		}
+
+		if len(courseIDs) == 0 {
+			return []models.Course{}, nil
+		}
+
+		courses, err := getCourses(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		filesMap, err := getFilesMap(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		testsMap, err := getTestsMap(db, courseIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range courses {
+			courseID := courses[i].Id
+			courses[i].Files = getFromMap(filesMap, courseID)
+			courses[i].Tests = getFromMap(testsMap, courseID)
+		}
+		return courses, nil
+	}
 }
 
 func GetUserGroupID(db *sql.DB, username string) (int, error) {
 	var groupID sql.NullInt64
 	err := db.QueryRow("SELECT id_group FROM users WHERE username = $1", username).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("user not found")
+		}
+		return 0, err
+	}
+	if !groupID.Valid {
+		return 0, nil
+	}
+	return int(groupID.Int64), nil
+}
+
+func GetUserID(db *sql.DB, username string) (int, error) {
+	var groupID sql.NullInt64
+	err := db.QueryRow("SELECT id FROM users WHERE username = $1", username).Scan(&groupID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, fmt.Errorf("user not found")
@@ -415,6 +467,28 @@ func GetUserCourseIDs(db *sql.DB, groupID int) ([]int, error) {
 	}
 
 	rows, err := db.Query("SELECT id_course FROM groups_courses WHERE id_group = $1", groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var courseIDs []int
+	for rows.Next() {
+		var courseID int
+		if err := rows.Scan(&courseID); err != nil {
+			return nil, err
+		}
+		courseIDs = append(courseIDs, courseID)
+	}
+	return courseIDs, rows.Err()
+}
+
+func GetTeacherCourseIDs(db *sql.DB, userID int) ([]int, error) {
+	if userID == 0 {
+		return []int{}, nil
+	}
+
+	rows, err := db.Query("SELECT id_course FROM users_courses WHERE id_user = $1", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -577,9 +651,17 @@ func getTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Группа пользователя " + username + ": " + group)
 
+	courses, err := GetUserCourses(Db, username, true)
+	if err != nil {
+		log.Println("Внутренняя ошибка")
+		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
 	data := models.ProfilePageData{
 		Username: username,
 		Group:    group,
+		Courses:  courses,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -855,7 +937,7 @@ func getCoursesData(w http.ResponseWriter, r *http.Request) {
 
 	var data models.CoursesPageData
 
-	courses, err := GetUserCourses(Db, username)
+	courses, err := GetUserCourses(Db, username, false)
 	if err != nil {
 		log.Println("Ошибка получения данных курсов из БД")
 		sendError(w, "Внутренняя ошибка", http.StatusInternalServerError)
@@ -1464,7 +1546,7 @@ func handleDeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = Db.Exec("DELETE FROM courses WHERE id_course = $1", data.Id)
+	_, err = Db.Exec("DELETE FROM courses WHERE id = $1", data.Id)
 	if err != nil {
 		log.Println("Ошибка базы данных")
 		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
@@ -1602,6 +1684,38 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func getCourseNameByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var id string
+
+	// Чтение JSON
+	err := json.NewDecoder(r.Body).Decode(&id)
+	if err != nil {
+		log.Println("Некорректный JSON")
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Поиск курса в БД
+	var coursename string
+	err = Db.QueryRow("SELECT name FROM courses WHERE id = $1", id).Scan(&coursename)
+	if err != nil {
+		log.Println("Ошибка базы данных")
+		sendError(w, "Ошибка базы данных "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(coursename)
+}
+
 // Отправление сообщения об ошибке
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
@@ -1679,6 +1793,7 @@ func main() {
 	r.HandleFunc("/api/getteacherprofiledata", getTeacherProfileData)
 	r.HandleFunc("/api/getteachercoursesdata", getTeacherCoursesData)
 	r.HandleFunc("/api/getcoursesdata", getCoursesData)
+	r.HandleFunc("/api/getcoursenamebyid", getCourseNameByID)
 	r.HandleFunc("/api/gettestsdata", getTestsData)
 	r.HandleFunc("/api/getcoursedata/{name}", getCourseData)
 	r.HandleFunc("/api/getviewdata/{name}", getViewData)

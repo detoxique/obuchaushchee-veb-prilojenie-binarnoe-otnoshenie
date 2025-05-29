@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"archive/zip"
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -10,13 +12,286 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/detoxique/obuchaushchee-veb-prilojenie-binarnoe-otnoshenie/app/internal/models"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
+
+// Резервное копирование
+func HandleBackup(w http.ResponseWriter, r *http.Request) {
+	// Создаем временную директорию
+	tempDir, err := os.MkdirTemp("", "backup_*")
+	if err != nil {
+		slog.Info("Ошибка " + err.Error())
+		http.Error(w, "Failed to create temp dir: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Копируем папку static/pdf
+	pdfBackupPath := filepath.Join(tempDir, "pdf_backup")
+	if err := copyDir("static/pdf", pdfBackupPath); err != nil {
+		slog.Info("Ошибка " + err.Error())
+		http.Error(w, "PDF backup failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Создаем дамп базы данных
+	dumpPath := filepath.Join(tempDir, "db_dump.sql")
+	if err := createDBDump(dumpPath); err != nil {
+		slog.Info("Ошибка " + err.Error())
+		http.Error(w, "Database dump failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Создаем ZIP-архив в памяти
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=backup_"+time.Now().Format("20060102-150405")+".zip")
+
+	zipWriter := zip.NewWriter(w)
+	defer zipWriter.Close()
+
+	// Добавляем файлы в архив
+	if err := addFilesToZip(zipWriter, tempDir, ""); err != nil {
+		slog.Info("Ошибка " + err.Error())
+		http.Error(w, "ZIP creation failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			slog.Info("Ошибка " + err.Error())
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			slog.Info("Ошибка " + err.Error())
+			return err
+		}
+
+		targetPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(targetPath, os.ModePerm)
+		}
+
+		return copyFile(path, targetPath)
+	})
+}
+
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		slog.Info("Ошибка " + err.Error())
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		slog.Info("Ошибка " + err.Error())
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+
+func createDBDump(dumpPath string) error {
+	// Параметры подключения к БД (лучше вынести в конфиг/переменные окружения)
+	connStr := "postgres://postgres:123@localhost/portaldb?sslmode=disable"
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return fmt.Errorf("DB connection failed: %w", err)
+	}
+	defer db.Close()
+
+	file, err := os.Create(dumpPath)
+	if err != nil {
+		return fmt.Errorf("file creation failed: %w", err)
+	}
+	defer file.Close()
+
+	// 1. Экспорт схемы таблиц
+	if err := exportSchema(db, file); err != nil {
+		return fmt.Errorf("schema export failed: %w", err)
+	}
+
+	// 2. Экспорт данных
+	if err := exportData(db, file); err != nil {
+		return fmt.Errorf("data export failed: %w", err)
+	}
+
+	return nil
+}
+
+func exportSchema(db *sql.DB, file *os.File) error {
+	// Получаем список таблиц
+	tables, err := getTables(db)
+	if err != nil {
+		return err
+	}
+
+	// Для каждой таблицы получаем DDL
+	for _, table := range tables {
+		var ddl string
+		err := db.QueryRow(
+			`SELECT 'CREATE TABLE ' || $1 || ' (' || 
+            string_agg(column_definition, ', ') || ');'
+            FROM (
+                SELECT 
+                    column_name || ' ' || data_type || 
+                    CASE WHEN character_maximum_length IS NOT NULL 
+                         THEN '(' || character_maximum_length || ')' 
+                         ELSE '' 
+                    END || 
+                    CASE WHEN is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END AS column_definition
+                FROM information_schema.columns
+                WHERE table_name = $1
+                ORDER BY ordinal_position
+            ) AS columns;`,
+			table,
+		).Scan(&ddl)
+
+		if err != nil {
+			return fmt.Errorf("failed to get DDL for %s: %w", table, err)
+		}
+
+		file.WriteString(ddl + "\n\n")
+	}
+	return nil
+}
+
+func getTables(db *sql.DB) ([]string, error) {
+	rows, err := db.Query(
+		`SELECT table_name 
+         FROM information_schema.tables 
+         WHERE table_schema = 'public' 
+           AND table_type = 'BASE TABLE'`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+	return tables, rows.Err()
+}
+
+func exportData(db *sql.DB, file *os.File) error {
+	tables, err := getTables(db)
+	if err != nil {
+		return err
+	}
+
+	for _, table := range tables {
+		// Получаем данные таблицы
+		rows, err := db.Query(fmt.Sprintf(`SELECT * FROM "%s"`, table))
+		if err != nil {
+			return fmt.Errorf("failed to query table %s: %w", table, err)
+		}
+		defer rows.Close()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			return fmt.Errorf("failed to get columns for %s: %w", table, err)
+		}
+
+		// Для каждой строки формируем INSERT
+		for rows.Next() {
+			values := make([]interface{}, len(columns))
+			pointers := make([]interface{}, len(columns))
+			for i := range values {
+				pointers[i] = &values[i]
+			}
+
+			if err := rows.Scan(pointers...); err != nil {
+				return fmt.Errorf("row scan failed: %w", err)
+			}
+
+			var valueStrings []string
+			for _, v := range values {
+				switch value := v.(type) {
+				case nil:
+					valueStrings = append(valueStrings, "NULL")
+				case string:
+					valueStrings = append(valueStrings, "'"+escapeSQLString(value)+"'")
+				case []byte:
+					valueStrings = append(valueStrings, "'"+escapeSQLString(string(value))+"'")
+				default:
+					valueStrings = append(valueStrings, fmt.Sprintf("%v", value))
+				}
+			}
+
+			insert := fmt.Sprintf(
+				"INSERT INTO \"%s\" VALUES (%s);\n",
+				table,
+				strings.Join(valueStrings, ", "),
+			)
+			file.WriteString(insert)
+		}
+		file.WriteString("\n")
+	}
+	return nil
+}
+
+func escapeSQLString(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+func addFilesToZip(zipWriter *zip.Writer, basePath, baseInZip string) error {
+	return filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			slog.Info("Ошибка " + err.Error())
+			return err
+		}
+
+		relPath, _ := filepath.Rel(basePath, path)
+		if relPath == "." {
+			return nil
+		}
+
+		zipPath := filepath.Join(baseInZip, relPath)
+
+		if info.IsDir() {
+			_, err := zipWriter.Create(zipPath + "/")
+			return err
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			slog.Info("Ошибка " + err.Error())
+			return err
+		}
+		defer file.Close()
+
+		zipFile, err := zipWriter.Create(zipPath)
+		if err != nil {
+			slog.Info("Ошибка " + err.Error())
+			return err
+		}
+
+		_, err = io.Copy(zipFile, file)
+		return err
+	})
+}
 
 // Страница авторизации
 func ServeLoginPage(w http.ResponseWriter, r *http.Request) {
@@ -139,12 +414,6 @@ func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServeCreateTestPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		slog.Info("Метод не разрешен")
-		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
-		return
-	}
-
 	vars := mux.Vars(r)
 	id := vars["id"]
 
@@ -166,7 +435,7 @@ func ServeCreateTestPage(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера: " + strconv.Itoa(resp.StatusCode))
+		slog.Info("Ошибка сервера(get course name): " + strconv.Itoa(resp.StatusCode))
 		w.Header().Set("Content-Type", "application/json")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
@@ -187,7 +456,7 @@ func ServeCreateTestPage(w http.ResponseWriter, r *http.Request) {
 		Coursename string `json:"Coursename"`
 	}{Coursename: name}
 
-	tmpl, err := template.ParseFiles("templates/createtest.html")
+	tmpl, err := template.ParseFiles("templates/test.html")
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
@@ -451,14 +720,18 @@ func GetProfileData(w http.ResponseWriter, r *http.Request) {
 				date = profileData.Courses[i].Tests[j].EndDate
 			}
 		}
-		if len(profileData.Courses[i].Tests)%10 == 0 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
-		} else if len(profileData.Courses[i].Tests)%10 == 1 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тест до ` + date.Format("02.01.2006") + `!</h4></li>`
-		} else if len(profileData.Courses[i].Tests)%10 > 1 && len(profileData.Courses[i].Tests)%10 < 5 {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` теста до ` + date.Format("02.01.2006") + `!</h4></li>`
+		if len(profileData.Courses[i].Tests) > 0 {
+			if len(profileData.Courses[i].Tests)%10 == 0 {
+				tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
+			} else if len(profileData.Courses[i].Tests)%10 == 1 {
+				tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тест до ` + date.Format("02.01.2006") + `!</h4></li>`
+			} else if len(profileData.Courses[i].Tests)%10 > 1 && len(profileData.Courses[i].Tests)%10 < 5 {
+				tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` теста до ` + date.Format("02.01.2006") + `!</h4></li>`
+			} else {
+				tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
+			}
 		} else {
-			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>` + strconv.Itoa(len(profileData.Courses[i].Tests)) + ` тестов до ` + date.Format("02.01.2006") + `!</h4></li>`
+			tests += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>Тесты пока не загружены.</h4></li>`
 		}
 
 		if i > 0 {
@@ -584,6 +857,19 @@ func GetTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var coursesHTML string
+	for i := 0; i < len(profileData.Courses); i++ {
+		coursesHTML += `<li><a href="#">` + profileData.Courses[i].Name + `</a><br><h4>Материалов: ` + strconv.Itoa(len(profileData.Courses[i].Files)) + ` Тестов: ` + strconv.Itoa(len(profileData.Courses[i].Tests)) + `</h4></li>`
+	}
+
+	data := struct {
+		Username template.HTML `json:"Username"`
+		Courses  template.HTML `json:"Courses"`
+	}{
+		Username: template.HTML(profileData.Username),
+		Courses:  template.HTML(coursesHTML),
+	}
+
 	// Отправление страницы пользователю
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl, err := template.ParseFiles("templates/profileteacher.html")
@@ -593,7 +879,7 @@ func GetTeacherProfileData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.Execute(w, profileData)
+	tmpl.Execute(w, data)
 }
 
 func GetTeacherCoursesData(w http.ResponseWriter, r *http.Request) {
@@ -1377,6 +1663,16 @@ func HandleUploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// Ограничиваем размер файла
 	r.Body = http.MaxBytesReader(w, r.Body, 128)
+	body, _ := io.ReadAll(r.Body)
+
+	// Отправка запроса на другой сервер
+	resp, err := http.Post("http://localhost:1337/api/uploadfile", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
 }
 
 func HandleCreateCourse(w http.ResponseWriter, r *http.Request) {
@@ -1720,7 +2016,7 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&testrequest)
 	if err != nil {
-		slog.Info("Не удалось считать данные для входа")
+		slog.Info("Не удалось считать данные для входа " + err.Error())
 		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
 		return
 	}
@@ -1747,7 +2043,7 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if resp.StatusCode != http.StatusOK {
 		// Перенаправление ошибки от другого сервера
-		slog.Info("Ошибка сервера авторизации")
+		slog.Info("Ошибка сервера авторизации(не препод)")
 		body, _ := io.ReadAll(resp.Body)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(body)
@@ -1755,19 +2051,18 @@ func CreateTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Токен подтвержден
-	body, err = json.Marshal(&testrequest)
+	// Подготовка запроса к другому серверу
+	body, err = json.Marshal(testrequest)
 	if err != nil {
 		slog.Info("Ошибка преобразования в JSON")
 		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
 		return
 	}
 
-	slog.Info("Отправлен запрос на подтверждение токена")
-
 	// Отправка запроса на другой сервер
 	resp, err = http.Post("http://localhost:1337/api/tests/", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сервера авторизации(отправка запроса)", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()

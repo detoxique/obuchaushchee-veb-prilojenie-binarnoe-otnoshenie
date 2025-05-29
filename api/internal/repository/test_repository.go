@@ -161,13 +161,13 @@ func (r *TestRepository) CreateAnswerOption(ctx context.Context, option *models.
 }
 
 func (r *txRepository) CreateTest(ctx context.Context, test *models.Test) error {
-	query := `INSERT INTO tests (title, end_date, duration, 
-              attempts) 
-              VALUES ($1, $2, $3, $4) RETURNING id, upload_date`
+	query := `INSERT INTO tests (name, ends_date, duration, 
+              attempts, id_course) 
+              VALUES ($1, $2, $3, $4, $5) RETURNING id, upload_date`
 
 	err := r.tx.QueryRowContext(ctx, query,
 		test.Title, test.EndDate, test.Duration,
-		test.Attempts,
+		test.Attempts, test.CourseID,
 	).Scan(&test.ID, &test.UploadDate)
 
 	return err
