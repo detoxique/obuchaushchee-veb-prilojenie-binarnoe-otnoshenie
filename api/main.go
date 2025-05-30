@@ -11,6 +11,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -1716,6 +1718,73 @@ func getCourseNameByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(coursename)
 }
 
+func handleUploadFile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		log.Println("Метод не разрешен")
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Парсим multipart форму
+	err := r.ParseMultipartForm(128 << 20) // 128 MB max
+	if err != nil {
+		log.Println("Ошибка ParseMultipartForm " + err.Error())
+		http.Error(w, "Не удалось преобразовать форму", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем файл
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		log.Println("Ошибка " + err.Error())
+		http.Error(w, "Неправильный тип файла", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Получаем courseId
+	courseId := r.FormValue("courseId")
+	if courseId == "" {
+		http.Error(w, "Отсутствует ID курса", http.StatusBadRequest)
+		return
+	}
+
+	// Создаем папку для курса
+	courseDir := filepath.Join("../app/static", "pdf")
+	if err := os.MkdirAll(courseDir, 0755); err != nil {
+		log.Println("Ошибка " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	// Создаем файл на сервере
+	filePath := filepath.Join(courseDir, header.Filename)
+	dst, err := os.Create(filePath)
+	if err != nil {
+		log.Println("Ошибка " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	// Копируем содержимое
+	if _, err := io.Copy(dst, file); err != nil {
+		log.Println("Ошибка " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = Db.Exec("INSERT INTO files (id_course, filename, name, upload_date) VALUES ($1, $2, $3, $4)", courseId, header.Filename, header.Filename, time.Now())
+	if err != nil {
+		log.Println("Ошибка " + err.Error())
+		http.Error(w, "Внутренняя ошибка", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
 // Отправление сообщения об ошибке
 func sendError(w http.ResponseWriter, message string, status int) {
 	log.Println("Error: " + message)
@@ -1799,6 +1868,7 @@ func main() {
 	r.HandleFunc("/api/getviewdata/{name}", getViewData)
 	r.HandleFunc("/api/createcourse", handleCreateCourse)
 	r.HandleFunc("/api/deletecourse", handleDeleteCourse)
+	r.HandleFunc("/api/uploadfile", handleUploadFile)
 
 	r.HandleFunc("/api/admin/getadminpaneldata", getAdminPanelData)
 	r.HandleFunc("/api/admin/adduser", addUser)

@@ -117,8 +117,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         Загрузить
                                     </button>
                                     <input type="file" id="fileInput${course.id}" 
-                                           style="display:none" 
-                                           @change="uploadFile(${course.id})">
+                                        style="display:none" 
+                                        accept=".pdf" 
+                                        onchange="window.uploadFile(${course.id})">
                                     
                                     <button type="button" class="btn btn-secondary"
                                             onclick="window.location.href='/files/choose/${course.id}'">
@@ -184,7 +185,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td><button class="btn btn-danger btn-sm">Удалить</button></td>
             </tr>
         `).join('');
+
+        // В конце функции fillCoursesTable, после вставки HTML:
+        // tbody.innerHTML = courses.map(course => `...`).join('');
+
+        // // Добавляем обработчики событий для новых элементов
+        // courses.forEach(course => {
+        //     const input = document.getElementById(`fileInput${course.id}`);
+        //     if (input) {
+        //         input.addEventListener('change', () => window.uploadFile(course.id));
+        //     }
+        // });
     }
+
+    // document.addEventListener('change', function(e) {
+    // if (e.target.id.startsWith('fileInput')) {
+    //     const courseId = e.target.id.replace('fileInput', '');
+    //     window.uploadFile(courseId);
+    // }
+});
 
     // Инициализация поиска по таблице
     const searchInput = document.querySelector('.course-search input');
@@ -301,21 +320,84 @@ document.addEventListener('DOMContentLoaded', function() {
     window.uploadFile = function(courseId) {
         const input = document.getElementById(`fileInput${courseId}`);
         const file = input.files[0];
+        const button = document.querySelector(`#theoryModal${courseId} .btn-primary`);
+        const originalButtonText = button.innerHTML;
         
         if(file) {
+            // Проверка типа файла
+            if (file.type !== 'application/pdf') {
+                alert('Пожалуйста, загружайте только PDF-файлы');
+                input.value = ''; // Сброс выбора файла
+                return;
+            }
+
+            // Проверка размера файла (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Файл слишком большой. Максимальный размер: 10MB');
+                input.value = '';
+                return;
+            }
+
+            // Показываем индикатор загрузки
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Загрузка...';
+            button.disabled = true;
+            
             const formData = new FormData();
             formData.append('file', file);
             formData.append('courseId', courseId);
 
-            fetch('/api/uploadfile', {
+            fetch('http://localhost:9293/api/uploadfile', {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
-                if(response.ok) location.reload();
-                else alert('Ошибка загрузки файла');
+                if(response.ok) {
+                    // Обновляем список файлов без перезагрузки страницы
+                    updateFilesList(courseId, file.name);
+                } else {
+                    alert('Ошибка загрузки файла');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Сетевая ошибка при загрузке файла');
+            })
+            .finally(() => {
+                // Восстанавливаем кнопку
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+                input.value = ''; // Сбрасываем input
             });
         }
+    }
+
+    function updateFilesList(courseId, fileName) {
+        const fileList = document.querySelector(`#theoryModal${courseId} .list-group`);
+        
+        // Создаем новый элемент списка
+        const newFileItem = document.createElement('li');
+        newFileItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+        newFileItem.innerHTML = `
+            ${fileName}
+            <small class="text-muted">${new Date().toLocaleDateString()}</small>
+        `;
+        
+        // Добавляем в начало списка
+        fileList.insertBefore(newFileItem, fileList.firstChild);
+        
+        // Показываем уведомление
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success mt-3';
+        alertDiv.textContent = 'Файл успешно загружен!';
+        alertDiv.setAttribute('role', 'alert');
+        
+        const modalBody = document.querySelector(`#theoryModal${courseId} .modal-body`);
+        modalBody.appendChild(alertDiv);
+        
+        // Автоматически скрываем уведомление через 3 секунды
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
     }
 
     document.querySelector('.addform button.btn-primary').addEventListener('click', async function() {
@@ -464,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Ошибка удаления:', error);
         }
     }
-});
+//});
 
 function handleRedirect() {
     window.location.href = 'http://localhost:9293/profile';

@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -1662,17 +1664,68 @@ func HandleUploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ограничиваем размер файла
-	r.Body = http.MaxBytesReader(w, r.Body, 128)
-	body, _ := io.ReadAll(r.Body)
+	//r.Body = http.MaxBytesReader(w, r.Body, 128)
+	// body, _ := io.ReadAll(r.Body)
+	// slog.Info(string(body))
 
-	// Отправка запроса на другой сервер
-	resp, err := http.Post("http://localhost:1337/api/uploadfile", "application/json", bytes.NewBuffer(body))
+	// // Отправка запроса на другой сервер
+	// resp, err := http.Post("http://localhost:1337/api/uploadfile", "multipart/form-data", bytes.NewBuffer(body))
+	// if err != nil {
+	// 	http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+	// 	return
+	// }
+	// defer resp.Body.Close()
+
+	// // Чтение ответа от другого сервера
+	// w.Header().Set("Content-Type", "application/json")
+	// if resp.StatusCode != http.StatusOK {
+	// 	// Перенаправление ошибки от другого сервера
+	// 	body, _ := io.ReadAll(resp.Body)
+	// 	w.WriteHeader(resp.StatusCode)
+	// 	w.Write(body)
+	// 	return
+	// }
+	// w.Write(body)
+	targetURL, _ := url.Parse("http://localhost:1337/api/uploadfile")
+
+	proxyReq := &http.Request{
+		Method: r.Method,
+		URL:    targetURL,
+		Header: r.Header.Clone(), // Клонируем заголовки
+		Body:   r.Body,           // Используем оригинальное тело
+	}
+
+	// 3. Копируем важные стандартные заголовки
+	if r.Host != "" {
+		proxyReq.Header.Set("Host", r.Host)
+	}
+	if r.ContentLength > 0 {
+		proxyReq.ContentLength = r.ContentLength
+	}
+
+	// 4. Отправляем запрос к целевому серверу
+	client := &http.Client{}
+	resp, err := client.Do(proxyReq)
 	if err != nil {
-		http.Error(w, "Ошибка сервера авторизации", http.StatusInternalServerError)
+		http.Error(w, "Proxy error: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
+	// 5. Копируем заголовки ответа
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+
+	// 6. Устанавливаем статус код
+	w.WriteHeader(resp.StatusCode)
+
+	// 7. Копируем тело ответа
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		log.Println("Error copying response body:", err)
+	}
 }
 
 func HandleCreateCourse(w http.ResponseWriter, r *http.Request) {
